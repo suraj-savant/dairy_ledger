@@ -3,11 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants.dart';
 import '../../../core/firestore/firestore_paths.dart';
 import '../../../core/utils/formatters.dart';
+import '../../accounts/models/account.dart';
 import 'bill_slot.dart';
 
 /// One bill (shown as a "week" in the UI): a fixed range of [cycleDays] days
 /// of one account, with every entered milking slot stored in a single
-/// Firestore document (`accounts/{accountId}/bills/{startDate}`).
+/// Firestore document (`users/{ownerUid}/accounts/{accountId}/bills/{startDate}`).
 ///
 /// [startDate], [endDate] and [cycleDays] never change after creation, so a
 /// later change of the profile's bill cycle does not touch existing bills.
@@ -29,6 +30,8 @@ class Bill {
 
   /// dateKey -> session -> slot. Only slots with data are present.
   final Map<String, Map<Session, BillSlot>> days;
+
+  AccountRef get accountRef => (ownerUid: ownerUid, accountId: accountId);
 
   /// Bill ID = start date key, e.g. `2026-10-12`.
   String get id => Fmt.dateKey(startDate);
@@ -98,7 +101,6 @@ class Bill {
 
   /// Map used when the bill document is created.
   Json toCreateMap() => {
-        'ownerUid': ownerUid,
         'startDate': Fmt.dateKey(startDate),
         'endDate': Fmt.dateKey(endDate),
         'cycleDays': cycleDays,
@@ -111,7 +113,7 @@ class Bill {
         'deleted': false,
       };
 
-  factory Bill.fromDoc(String accountId, DocumentSnapshot<Json> doc) {
+  factory Bill.fromDoc(AccountRef account, DocumentSnapshot<Json> doc) {
     final m = doc.data() ?? const <String, dynamic>{};
     final rawDays = (m['days'] as Map?) ?? const {};
     final days = <String, Map<Session, BillSlot>>{};
@@ -126,8 +128,8 @@ class Bill {
       if (sessions.isNotEmpty) days[d.key as String] = sessions;
     }
     return Bill(
-      accountId: accountId,
-      ownerUid: (m['ownerUid'] as String?) ?? '',
+      accountId: account.accountId,
+      ownerUid: account.ownerUid,
       startDate: Fmt.parseKey(m['startDate'] as String),
       endDate: Fmt.parseKey(m['endDate'] as String),
       cycleDays: (m['cycleDays'] as num?)?.toInt() ?? AppConstants.defaultBillCycleDays,

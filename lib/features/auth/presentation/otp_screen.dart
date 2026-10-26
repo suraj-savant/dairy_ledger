@@ -68,7 +68,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         if (didPop) ref.read(loginProvider.notifier).reset();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Verify number')),
+        appBar: AppBar(title: const Text('Verify number'), automaticallyImplyLeading: false),
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),

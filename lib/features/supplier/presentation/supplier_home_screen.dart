@@ -45,14 +45,15 @@ class SupplierHomeScreen extends ConsumerWidget {
               onRefresh: () async {
                 // Pull-to-refresh: sync every followed account now.
                 final repo = ref.read(billRepositoryProvider);
-                await Future.wait([for (final f in followed) repo.sync(f.accountId, force: true)]);
+                await Future.wait([for (final f in followed) repo.sync(f.ref, force: true)]);
                 for (final f in followed) {
-                  ref.invalidate(latestBillProvider(f.accountId));
+                  ref.invalidate(latestBillProvider(f.ref));
                 }
               },
-              child: ListView.builder(
+              child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.only(bottom: 24),
+                separatorBuilder: (_, _) => const Divider(),
                 itemCount: followed.length,
                 itemBuilder: (_, i) => _FollowedTile(account: followed[i]),
               ),
@@ -67,7 +68,7 @@ class _FollowedTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final latest = ref.watch(latestBillProvider(account.accountId));
+    final latest = ref.watch(latestBillProvider(account.ref));
     final theme = Theme.of(context);
 
     final subtitle = [
@@ -81,8 +82,7 @@ class _FollowedTile extends ConsumerWidget {
       ),
     ].join('\n');
 
-    return Card(
-      child: ListTile(
+    return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: CircleAvatar(
           radius: 24,
@@ -108,8 +108,7 @@ class _FollowedTile extends ConsumerWidget {
           },
           itemBuilder: (_) => const [PopupMenuItem(value: 'remove', child: Text('Stop following'))],
         ),
-        onTap: () => context.push('/supplier/account/${account.accountId}'),
-      ),
+        onTap: () => context.push('/supplier/account/${account.ownerUid}/${account.accountId}'),
     );
   }
 }

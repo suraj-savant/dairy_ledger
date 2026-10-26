@@ -52,9 +52,9 @@ class AccountsNotifier extends AsyncNotifier<List<Account>> {
     return account;
   }
 
-  void delete(String accountId) {
-    ref.read(accountRepositoryProvider).softDelete(accountId);
-    state = AsyncData(_accounts.where((a) => a.id != accountId).toList());
+  void delete(Account account) {
+    ref.read(accountRepositoryProvider).softDelete(account.ref);
+    state = AsyncData(_accounts.where((a) => a.id != account.id).toList());
   }
 }
 

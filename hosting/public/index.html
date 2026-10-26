@@ -33,19 +33,19 @@
   <script>
     // This page only loads when the app did not open the link itself, i.e. the
     // app is not installed (or the link was opened on a phone without it).
-    // Link format: https://<domain>/a/<accountId>
-    var accountId = (location.pathname.match(/^\/a\/([^\/?#]+)/) || [])[1] || '';
+    // Link format: https://<domain>/a/<ownerUid>/<accountId>
+    var linkPath = (location.pathname.match(/^\/a\/([^\/?#]+\/[^\/?#]+)/) || [])[1] || '';
     var isDev = location.hostname.indexOf('dev-') === 0;
     var pkg = isDev ? 'com.dairyledger.app.dev' : 'com.dairyledger.app';
 
     // "referrer" is stored by Google Play and can be read by the app on first launch.
     var play = 'https://play.google.com/store/apps/details?id=' + pkg +
-               '&referrer=' + encodeURIComponent('account=' + accountId);
+               '&referrer=' + encodeURIComponent('account=' + linkPath);
     document.getElementById('install').href = play;
 
     // Explicit Android intent: opens the app if installed, else falls back to Play.
     document.getElementById('open').href =
-      'intent://' + location.host + '/a/' + accountId +
+      'intent://' + location.host + '/a/' + linkPath +
       '#Intent;scheme=https;package=' + pkg +
       ';S.browser_fallback_url=' + encodeURIComponent(play) + ';end';
 

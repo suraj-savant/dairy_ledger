@@ -5,15 +5,25 @@ import '../../../../core/utils/formatters.dart';
 import '../../../accounts/models/account.dart';
 import '../../models/bill.dart';
 
-/// Account name, the bill's date range and its totals (both sessions).
+/// Account name and the bill's date range and totals (both sessions), shown
+/// directly on the screen: no card, no shadow.
 class BillHeader extends StatelessWidget {
-  const BillHeader({super.key, required this.account, required this.bill, this.showDairy = false});
+  const BillHeader({
+    super.key,
+    required this.account,
+    required this.bill,
+    this.showDairy = false,
+    this.menu,
+  });
 
   final Account account;
   final Bill? bill;
 
   /// Suppliers also see which dairy the account belongs to.
   final bool showDairy;
+
+  /// Optional dropdown next to the name (QR code, delete week) for the admin.
+  final Widget? menu;
 
   @override
   Widget build(BuildContext context) {
@@ -22,73 +32,54 @@ class BillHeader extends StatelessWidget {
         ? '${account.dairyName} · ${account.category}'
         : account.category;
 
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppTheme.deepPurpleContainer,
-                  child: Text(account.initial,
-                      style: const TextStyle(
-                          color: AppTheme.deepPurple, fontWeight: FontWeight.bold, fontSize: 20)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(account.name, style: theme.textTheme.titleLarge),
-                      Text(subtitle, style: theme.textTheme.bodyMedium),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (bill != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Week: ${Fmt.range(bill!.startDate, bill!.endDate)}',
-                style: theme.textTheme.titleMedium,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: AppTheme.deepPurpleContainer,
+                child: Text(account.initial,
+                    style: const TextStyle(
+                        color: AppTheme.deepPurple, fontWeight: FontWeight.bold, fontSize: 20)),
               ),
-              const SizedBox(height: 8),
-              Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(account.name, style: theme.textTheme.titleLarge),
+                    Text(subtitle, style: theme.textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+              ?menu,
+            ],
+          ),
+          if (bill != null) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _Stat(label: 'Total Milk', value: '${Fmt.num(bill!.totalMilk)} ltr')),
-                  Expanded(child: _Stat(label: 'Total Bill', value: '₹ ${Fmt.money(bill!.totalAmount)}')),
+                  Text(
+                    'Week: ${Fmt.fullDate(bill!.startDate)} to ${Fmt.fullDate(bill!.endDate)}',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Total Milk: ${Fmt.num(bill!.totalMilk)} ltr', style: theme.textTheme.bodyLarge),
+                  const SizedBox(height: 4),
+                  Text('Total Bill: ${Fmt.money(bill!.totalAmount)} RS', style: theme.textTheme.bodyLarge),
                 ],
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary)),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(value, style: theme.textTheme.titleLarge?.copyWith(color: AppTheme.deepPurple)),
-        ),
-      ],
     );
   }
 }

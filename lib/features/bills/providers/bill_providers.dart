@@ -4,6 +4,7 @@ import '../../../core/constants.dart';
 import '../../../core/logger.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../accounts/models/account.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../profile/providers/profile_providers.dart';
 import '../data/bill_repository.dart';
@@ -63,19 +64,19 @@ class BillsState {
 ///
 /// "Previous" moves to an older bill (higher index), "Next" to a newer one.
 class BillsNotifier extends AsyncNotifier<BillsState> {
-  BillsNotifier(this.accountId);
-  final String accountId;
+  BillsNotifier(this.account);
+  final AccountRef account;
 
   BillRepository get _repo => ref.read(billRepositoryProvider);
 
   @override
   Future<BillsState> build() async {
-    await _repo.sync(accountId); // fetch only bills changed since last time
+    await _repo.sync(account); // fetch only bills changed since last time
     return _firstPage();
   }
 
   Future<BillsState> _firstPage({String? keepBillId}) async {
-    final page = await _repo.loadLatest(accountId);
+    final page = await _repo.loadLatest(account);
     var index = 0;
     if (keepBillId != null) {
       final i = page.bills.indexWhere((b) => b.id == keepBillId);
@@ -91,7 +92,7 @@ class BillsNotifier extends AsyncNotifier<BillsState> {
   /// Pull-to-refresh: ask the server for changes, then reload.
   Future<void> refresh() async {
     final keep = state.value?.current?.id;
-    await _repo.sync(accountId, force: true);
+    await _repo.sync(account, force: true);
     state = AsyncData(await _firstPage(keepBillId: keep));
   }
 
@@ -106,7 +107,7 @@ class BillsNotifier extends AsyncNotifier<BillsState> {
     if (!s.hasMore) return;
 
     state = AsyncData(s.copyWith(loadingMore: true));
-    final page = await _repo.loadOlder(accountId, s.bills.last);
+    final page = await _repo.loadOlder(account, s.bills.last);
     state = AsyncData(s.copyWith(
       bills: [...s.bills, ...page.bills],
       index: page.bills.isEmpty ? s.index : s.index + 1,
@@ -142,12 +143,12 @@ class BillsNotifier extends AsyncNotifier<BillsState> {
     if (uid == null) return 'Please sign in again.';
 
     final bill = Bill.create(
-      accountId: accountId,
+      accountId: account.accountId,
       ownerUid: uid,
       start: start,
       cycleDays: profile?.billCycleDays ?? AppConstants.defaultBillCycleDays,
     );
-    final overlap = await _repo.findOverlap(accountId, bill.startDate, bill.endDate);
+    final overlap = await _repo.findOverlap(account, bill.startDate, bill.endDate);
     if (overlap != null) {
       return 'These dates overlap the bill ${Fmt.range(overlap.startDate, overlap.endDate)}.';
     }
@@ -180,7 +181,7 @@ class BillsNotifier extends AsyncNotifier<BillsState> {
     final s = state.value;
     final bill = s?.current;
     if (s == null || bill == null) return;
-    _repo.softDelete(accountId, bill.id);
+    _repo.softDelete(account, bill.id);
     final bills = [...s.bills]..removeAt(s.index);
     logd('STATE', 'bill ${bill.id} deleted');
     state = AsyncData(s.copyWith(
@@ -191,21 +192,7 @@ class BillsNotifier extends AsyncNotifier<BillsState> {
 }
 
 final billsProvider =
-    AsyncNotifierProvider.autoDispose.family<BillsNotifier, BillsState, String>(
+    AsyncNotifierProvider.autoDispose.family<BillsNotifier, BillsState, AccountRef>(
   BillsNotifier.new,
   name: 'billsProvider',
-);
-
-/// Which milking session the account screen shows. Starts on the session
-/// that matches the time of day.
-class SessionNotifier extends Notifier<Session> {
-  @override
-  Session build() =>
-      DateTime.now().hour < 15 ? Session.morning : Session.evening;
-  void select(Session s) => state = s;
-}
-
-final sessionProvider = NotifierProvider.autoDispose<SessionNotifier, Session>(
-  SessionNotifier.new,
-  name: 'sessionProvider',
 );

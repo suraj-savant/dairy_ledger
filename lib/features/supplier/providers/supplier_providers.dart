@@ -21,6 +21,7 @@ class FollowedAccountsNotifier extends Notifier<List<FollowedAccount>> {
   /// Adds (or refreshes) a followed account from a shared link.
   void follow(Account account) {
     final entry = FollowedAccount(
+      ownerUid: account.ownerUid,
       accountId: account.id,
       accountName: account.name,
       dairyName: account.dairyName,
@@ -50,19 +51,19 @@ final followedAccountsProvider =
 
 /// Loads an account for the supplier screens; refreshes from the server at
 /// most every few hours so a deleted or renamed account is noticed.
-final supplierAccountProvider = FutureProvider.autoDispose.family<Account?, String>(
-  (ref, accountId) =>
-      ref.watch(accountRepositoryProvider).fetchPublic(accountId, refresh: true),
+final supplierAccountProvider = FutureProvider.autoDispose.family<Account?, AccountRef>(
+  (ref, account) =>
+      ref.watch(accountRepositoryProvider).fetchPublic(account, refresh: true),
   name: 'supplierAccountProvider',
 );
 
 /// Newest bill of a followed account (shown on the supplier home tile).
 /// Syncs first, so it costs about one read plus any changed bill.
-final latestBillProvider = FutureProvider.autoDispose.family<Bill?, String>(
-  (ref, accountId) async {
+final latestBillProvider = FutureProvider.autoDispose.family<Bill?, AccountRef>(
+  (ref, account) async {
     final repo = ref.watch(billRepositoryProvider);
-    await repo.sync(accountId);
-    final page = await repo.loadLatest(accountId, limit: 1);
+    await repo.sync(account);
+    final page = await repo.loadLatest(account, limit: 1);
     return page.bills.firstOrNull;
   },
   name: 'latestBillProvider',

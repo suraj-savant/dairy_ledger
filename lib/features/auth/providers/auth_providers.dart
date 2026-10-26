@@ -4,10 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants.dart';
 import '../../../core/providers.dart';
 import '../data/auth_repository.dart';
+import '../data/session_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepository(ref.watch(firebaseAuthProvider)),
   name: 'authRepositoryProvider',
+);
+
+final sessionServiceProvider = Provider<SessionService>(
+  (ref) => SessionService(
+    ref.watch(authRepositoryProvider),
+    ref.watch(localDataServiceProvider),
+  ),
+  name: 'sessionServiceProvider',
 );
 
 /// Current Firebase user (null = signed out). The router listens to this.

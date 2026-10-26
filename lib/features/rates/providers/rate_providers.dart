@@ -67,7 +67,11 @@ final ratesProvider =
 /// Category chosen in the Rates dropdown (null = first one).
 class SelectedCategory extends Notifier<String?> {
   @override
-  String? build() => null;
+  String? build() {
+    ref.watch(authStateProvider); // a different user starts with no selection
+    return null;
+  }
+
   void select(String? category) => state = category;
 }
 

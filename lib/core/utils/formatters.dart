@@ -7,6 +7,7 @@ class Fmt {
   static final DateFormat _key = DateFormat('yyyy-MM-dd');
   static final DateFormat _short = DateFormat('dd MMM');
   static final DateFormat _long = DateFormat('dd MMM yyyy');
+  static final DateFormat _full = DateFormat('dd-MM-yyyy');
 
   /// Firestore date key, e.g. `2026-10-12`. Sorts chronologically as text.
   static String dateKey(DateTime d) => _key.format(d);
@@ -19,6 +20,9 @@ class Fmt {
 
   /// `12 Oct 2026`.
   static String longDate(DateTime d) => _long.format(d);
+
+  /// `12-10-2026`, the numeric format used in the bill screens.
+  static String fullDate(DateTime d) => _full.format(d);
 
   /// `12 Oct 2026 – 18 Oct 2026`.
   static String range(DateTime start, DateTime end) =>

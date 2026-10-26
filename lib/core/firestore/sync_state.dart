@@ -36,6 +36,15 @@ class SyncCursorStore {
         _k(key), '${candidate.seconds}:${candidate.nanoseconds}');
   }
 
+  /// Forgets every cursor (used when the whole local cache is cleared).
+  Future<void> clearAll() async {
+    final keys = _prefs.getKeys().where((k) => k.startsWith('sync_cursor.')).toList();
+    logd('SYNC', 'clearing ${keys.length} cursors');
+    for (final k in keys) {
+      await _prefs.remove(k);
+    }
+  }
+
   Future<void> clear(String key) async {
     logd('SYNC', 'cursor[$key] cleared');
     await _prefs.remove(_k(key));
@@ -45,6 +54,9 @@ class SyncCursorStore {
 /// In-memory throttle so screens that open repeatedly do not re-sync every time.
 class SyncThrottle {
   final Map<String, DateTime> _last = {};
+
+  /// Forget every sync time (after the local cache was cleared).
+  void clear() => _last.clear();
 
   /// True when [key] has not been synced within [window] (default
   /// [AppConstants.syncThrottle]) or [force] is set. Marks it as synced now

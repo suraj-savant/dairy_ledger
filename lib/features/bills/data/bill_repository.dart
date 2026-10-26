@@ -8,9 +8,10 @@ import '../../../core/firestore/sync_state.dart';
 import '../../../core/firestore/write_tracker.dart';
 import '../../../core/logger.dart';
 import '../../../core/utils/formatters.dart';
+import '../../accounts/models/account.dart';
 import '../models/bill.dart';
 
-/// Reads and writes `accounts/{accountId}/bills/{billId}`.
+/// Reads and writes `users/{ownerUid}/accounts/{accountId}/bills/{billId}`.
 ///
 /// Used by the admin screens and, read-only, by the supplier screens.
 /// Cost model: one document per bill, so a bill view is 1 read and saving a
@@ -27,14 +28,14 @@ class BillRepository {
   /// First sync loads the newest page of bills; later syncs fetch only bills
   /// whose `updatedAt` is newer than the saved cursor (including soft-deleted
   /// ones, so they disappear from the cache view).
-  Future<void> sync(String accountId, {bool force = false}) async {
-    final key = 'bills.$accountId';
+  Future<void> sync(AccountRef account, {bool force = false}) async {
+    final key = 'bills.${account.accountId}';
     if (!_throttle.take(key, force: force)) return;
     await runDeltaSync(
       cursorKey: key,
       cursors: _cursors,
       buildQuery: (cursor) {
-        final bills = _paths.bills(accountId);
+        final bills = _paths.bills(account.ownerUid, account.accountId);
         return cursor == null
             ? bills.orderBy('startDate', descending: true).limit(AppConstants.billPageSize)
             : bills.where('updatedAt', isGreaterThan: cursor).orderBy('updatedAt');
@@ -45,60 +46,60 @@ class BillRepository {
   /// Newest bills from the cache (call [sync] first). Returns the raw page
   /// size too so the caller can tell whether older bills may exist.
   Future<({List<Bill> bills, int rawCount})> loadLatest(
-    String accountId, {
+    AccountRef account, {
     int limit = AppConstants.billPageSize,
   }) async {
     final query = _paths
-        .bills(accountId)
+        .bills(account.ownerUid, account.accountId)
         .orderBy('startDate', descending: true)
         .limit(limit);
-    var snap = await getQueryFromCache(query, label: 'bills latest account=$accountId');
-    if (snap.docs.isEmpty && _cursors.read('bills.$accountId') != null) {
+    var snap = await getQueryFromCache(query, label: 'bills latest account=${account.accountId}');
+    if (snap.docs.isEmpty && _cursors.read('bills.${account.accountId}') != null) {
       // Cursor says we synced but the cache is empty (cache was cleared):
       // reload the first page from the server.
-      logd('SYNC', 'cache empty despite cursor for $accountId, reloading');
-      await _cursors.clear('bills.$accountId');
-      await sync(accountId, force: true);
-      snap = await getQueryFromCache(query, label: 'bills latest (retry) account=$accountId');
+      logd('SYNC', 'cache empty despite cursor for ${account.accountId}, reloading');
+      await _cursors.clear('bills.${account.accountId}');
+      await sync(account, force: true);
+      snap = await getQueryFromCache(query, label: 'bills latest (retry) account=${account.accountId}');
     }
-    return (bills: _toBills(accountId, snap), rawCount: snap.docs.length);
+    return (bills: _toBills(account, snap), rawCount: snap.docs.length);
   }
 
   /// Older bills, always fetched from the server (then cached by the SDK).
   /// Fetching from the cache could return a page with gaps, because only
   /// recently changed old bills are cached.
   Future<({List<Bill> bills, int rawCount})> loadOlder(
-    String accountId,
+    AccountRef account,
     Bill last, {
     int limit = AppConstants.billPageSize,
   }) async {
     final query = _paths
-        .bills(accountId)
+        .bills(account.ownerUid, account.accountId)
         .orderBy('startDate', descending: true)
         .startAfter([Fmt.dateKey(last.startDate)])
         .limit(limit);
     final snap = await getQueryFromServer(query, label: 'bills older than ${last.id}');
-    return (bills: _toBills(accountId, snap), rawCount: snap.docs.length);
+    return (bills: _toBills(account, snap), rawCount: snap.docs.length);
   }
 
-  List<Bill> _toBills(String accountId, QuerySnapshot<Json> snap) => snap.docs
+  List<Bill> _toBills(AccountRef account, QuerySnapshot<Json> snap) => snap.docs
       .where((d) => d.data()['deleted'] != true)
-      .map((d) => Bill.fromDoc(accountId, d))
+      .map((d) => Bill.fromDoc(account, d))
       .toList();
 
   /// The existing bill whose range overlaps [start]..[end], or null.
   /// Asks the server (a few documents at most) so older bills that are not
   /// cached are also checked; falls back to the cache when offline.
-  Future<Bill?> findOverlap(String accountId, DateTime start, DateTime end) async {
+  Future<Bill?> findOverlap(AccountRef account, DateTime start, DateTime end) async {
     // A bill is at most 31 days long, so any overlapping bill starts within
     // 30 days before [start] and no later than [end].
     final from = Fmt.dateKey(DateTime(start.year, start.month, start.day - 30));
     final query = _paths
-        .bills(accountId)
+        .bills(account.ownerUid, account.accountId)
         .where('startDate', isGreaterThanOrEqualTo: from)
         .where('startDate', isLessThanOrEqualTo: Fmt.dateKey(end));
     final snap = await getQueryFromServer(query, label: 'bills overlap $from..${Fmt.dateKey(end)}');
-    for (final bill in _toBills(accountId, snap)) {
+    for (final bill in _toBills(account, snap)) {
       if (!bill.endDate.isBefore(start) && !bill.startDate.isAfter(end)) return bill;
     }
     return null;
@@ -106,7 +107,7 @@ class BillRepository {
 
   /// Creates an empty bill document.
   void create(Bill bill) {
-    final ref = _paths.bills(bill.accountId).doc(bill.id);
+    final ref = _paths.bills(bill.ownerUid, bill.accountId).doc(bill.id);
     trackWrite(
       'create ${ref.path} (${Fmt.dateKey(bill.startDate)}..${Fmt.dateKey(bill.endDate)})',
       ref.set({...bill.toCreateMap(), 'updatedAt': FieldValue.serverTimestamp()}),
@@ -116,7 +117,7 @@ class BillRepository {
   /// Persists one changed slot of [updated] (already containing the new slot)
   /// together with the recomputed totals: a single document update.
   void saveSlot(Bill updated, DateTime date, Session session) {
-    final ref = _paths.bills(updated.accountId).doc(updated.id);
+    final ref = _paths.bills(updated.ownerUid, updated.accountId).doc(updated.id);
     final slot = updated.slot(date, session);
     final dateKey = Fmt.dateKey(date);
     trackWrite(
@@ -132,8 +133,8 @@ class BillRepository {
     );
   }
 
-  void softDelete(String accountId, String billId) {
-    final ref = _paths.bills(accountId).doc(billId);
+  void softDelete(AccountRef account, String billId) {
+    final ref = _paths.bills(account.ownerUid, account.accountId).doc(billId);
     trackWrite(
       'soft-delete ${ref.path}',
       ref.update({'deleted': true, 'updatedAt': FieldValue.serverTimestamp()}),

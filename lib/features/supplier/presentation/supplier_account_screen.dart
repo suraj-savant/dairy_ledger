@@ -3,28 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/state_views.dart';
+import '../../accounts/models/account.dart';
 import '../../bills/presentation/bill_view.dart';
-import '../../bills/presentation/widgets/bill_pager.dart';
 import '../providers/supplier_providers.dart';
 
 /// Read-only account screen for farmers / suppliers. It reuses [BillView] with
 /// `readOnly: true`, so there are no inputs, no Add week and no admin menu.
 class SupplierAccountScreen extends ConsumerWidget {
-  const SupplierAccountScreen({super.key, required this.accountId});
+  const SupplierAccountScreen({super.key, required this.account});
 
-  final String accountId;
+  final AccountRef account;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final account = ref.watch(supplierAccountProvider(accountId));
+    final loaded = ref.watch(supplierAccountProvider(account));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Milk records')),
-      body: account.when(
+      body: loaded.when(
         loading: () => const LoadingView(),
         error: (e, _) => ErrorView(
           message: 'Could not open this account. Check your internet connection.',
-          onRetry: () => ref.invalidate(supplierAccountProvider(accountId)),
+          onRetry: () => ref.invalidate(supplierAccountProvider(account)),
         ),
         data: (a) {
           if (a == null || a.deleted) {
@@ -33,7 +33,7 @@ class SupplierAccountScreen extends ConsumerWidget {
               message: 'This account is no longer available.',
               actionLabel: 'Remove from my list',
               onAction: () {
-                ref.read(followedAccountsProvider.notifier).remove(accountId);
+                ref.read(followedAccountsProvider.notifier).remove(account.accountId);
                 context.pop();
               },
             );
@@ -41,7 +41,6 @@ class SupplierAccountScreen extends ConsumerWidget {
           return BillView(account: a, readOnly: true);
         },
       ),
-      bottomNavigationBar: const SessionBar(),
     );
   }
 }

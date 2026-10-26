@@ -289,6 +289,17 @@ class AppTheme {
         ),
       ),
 
+      // Tabs (Morning | Evening)
+      tabBarTheme: const TabBarThemeData(
+        labelColor: deepPurple,
+        unselectedLabelColor: textSecondary,
+        indicatorColor: deepPurple,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Color(0xFFE5DFEB),
+        labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        unselectedLabelStyle: TextStyle(fontSize: 16),
+      ),
+
       // Snack bars float above the bottom bars
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

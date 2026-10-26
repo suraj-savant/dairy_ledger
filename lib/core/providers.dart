@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firestore/firestore_paths.dart';
 import 'firestore/sync_state.dart';
+import 'local_data_service.dart';
 
 /// Low-level singletons shared by repositories. Tests override these.
 
@@ -25,3 +26,12 @@ final syncCursorStoreProvider = Provider<SyncCursorStore>(
     (ref) => SyncCursorStore(ref.watch(sharedPrefsProvider)));
 
 final syncThrottleProvider = Provider<SyncThrottle>((ref) => SyncThrottle());
+
+final localDataServiceProvider = Provider<LocalDataService>(
+  (ref) => LocalDataService(
+    ref.watch(firestoreProvider),
+    ref.watch(syncCursorStoreProvider),
+    ref.watch(syncThrottleProvider),
+  ),
+  name: 'localDataServiceProvider',
+);

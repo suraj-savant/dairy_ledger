@@ -28,7 +28,7 @@ class SplashScreen extends ConsumerWidget {
                 ),
               ),
               TextButton(
-                onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                onPressed: () => ref.read(sessionServiceProvider).logout(),
                 child: const Text('Log out'),
               ),
               const SizedBox(height: 16),
@@ -38,17 +38,15 @@ class SplashScreen extends ConsumerWidget {
       );
     }
 
+    // White to match the native launch screen, so there is no flash between them.
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.local_drink_rounded,
-                size: 72, color: Theme.of(context).colorScheme.primary),
+            Image.asset('assets/DairyLedger.png', width: 240, semanticLabel: AppConstants.appName),
             const SizedBox(height: 16),
-            Text(AppConstants.appName.toUpperCase(),
-                style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 32),
             const CircularProgressIndicator(),
           ],
         ),

@@ -13,7 +13,7 @@ class AccountDeletionService {
   Future<void> deleteAllData(String uid) async {
     logd('FIRESTORE', 'DELETE all data of $uid');
 
-    final accounts = await _paths.accounts.where('ownerUid', isEqualTo: uid).get();
+    final accounts = await _paths.accounts(uid).get();
     for (final account in accounts.docs) {
       final bills = await account.reference.collection('bills').get();
       await _deleteAll(bills.docs.map((d) => d.reference).toList());

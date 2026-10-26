@@ -2,12 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 typedef Json = Map<String, dynamic>;
 
-/// Single place that knows the Firestore layout (see docs/ARCHITECTURE.md §2):
+/// Single place that knows the Firestore layout (see docs/ARCHITECTURE.md §2).
+/// Everything an admin owns lives under their user document:
 ///
-///   users/{uid}                          admin profile (private)
-///   users/{uid}/rates/{category}         rate chart (private)
-///   accounts/{accountId}                 account; the random ID is the share key
-///   accounts/{accountId}/bills/{billId}  one bill (all days) per document
+///   users/{uid}                                       admin profile (private)
+///   users/{uid}/rates/{category}                      rate chart (private)
+///   users/{uid}/accounts/{accountId}                  account; its random ID is the share key
+///   users/{uid}/accounts/{accountId}/bills/{billId}   one bill (all days) per document
 class FsPaths {
   const FsPaths(this.db);
   final FirebaseFirestore db;
@@ -16,11 +17,11 @@ class FsPaths {
 
   CollectionReference<Json> rates(String uid) => user(uid).collection('rates');
 
-  CollectionReference<Json> get accounts => db.collection('accounts');
+  CollectionReference<Json> accounts(String uid) => user(uid).collection('accounts');
 
-  DocumentReference<Json> account(String accountId) =>
-      accounts.doc(accountId);
+  DocumentReference<Json> account(String uid, String accountId) =>
+      accounts(uid).doc(accountId);
 
-  CollectionReference<Json> bills(String accountId) =>
-      account(accountId).collection('bills');
+  CollectionReference<Json> bills(String uid, String accountId) =>
+      account(uid, accountId).collection('bills');
 }

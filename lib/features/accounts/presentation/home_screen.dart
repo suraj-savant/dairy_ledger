@@ -8,7 +8,8 @@ import '../../../core/widgets/state_views.dart';
 import '../models/account.dart';
 import '../providers/account_providers.dart';
 
-/// Home tab: the admin's accounts. Tap a tile to open its bills.
+/// Home tab: the admin's accounts as a flat list (no cards, no shadows).
+/// Tap a row to open its bills.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -47,11 +48,12 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ])
-              : ListView.builder(
+              : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                  padding: const EdgeInsets.only(bottom: 96),
                   itemCount: list.length,
-                  itemBuilder: (_, i) => _AccountTile(account: list[i]),
+                  separatorBuilder: (_, _) => const Divider(),
+                  itemBuilder: (_, i) => _AccountRow(account: list[i]),
                 ),
         ),
       ),
@@ -64,27 +66,25 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _AccountTile extends StatelessWidget {
-  const _AccountTile({required this.account});
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({required this.account});
   final Account account;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: AppTheme.deepPurpleContainer,
-          child: Text(account.initial,
-              style: const TextStyle(
-                  color: AppTheme.deepPurple, fontWeight: FontWeight.bold, fontSize: 20)),
-        ),
-        title: Text(account.name),
-        subtitle: Text(account.category),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push('/account/${account.id}'),
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundColor: AppTheme.deepPurpleContainer,
+        child: Text(account.initial,
+            style: const TextStyle(
+                color: AppTheme.deepPurple, fontWeight: FontWeight.bold, fontSize: 20)),
       ),
+      title: Text(account.name),
+      subtitle: Text(account.category),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => context.push('/account/${account.id}'),
     );
   }
 }

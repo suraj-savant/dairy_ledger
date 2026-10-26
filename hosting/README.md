@@ -2,7 +2,7 @@
 
 Static site served by Firebase Hosting from `hosting/public`:
 
-* `index.html` — shown when someone opens `https://<domain>/a/<accountId>` and the app did not
+* `index.html` — shown when someone opens `https://<domain>/a/<ownerUid>/<accountId>` and the app did not
   take the link (app not installed). It sends them to the Play Store.
 * `.well-known/assetlinks.json` — lets Android open the app directly for these links
   (Android App Links verification).

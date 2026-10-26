@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../../../core/constants.dart';
 import '../../providers/bill_providers.dart';
 
 /// `Previous week` and `Next` / `Add week` buttons under the table.
@@ -50,32 +47,6 @@ class BillPager extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// `Morning | Evening` bar at the bottom of the account screens.
-class SessionBar extends ConsumerWidget {
-  const SessionBar({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(sessionProvider);
-    return NavigationBar(
-      selectedIndex: session.index,
-      onDestinationSelected: (i) {
-        // Unfocus first so a half-edited row is saved before the table changes.
-        FocusManager.instance.primaryFocus?.unfocus();
-        ref.read(sessionProvider.notifier).select(Session.values[i]);
-      },
-      destinations: const [
-        NavigationDestination(
-            icon: Icon(Icons.wb_sunny_outlined), selectedIcon: Icon(Icons.wb_sunny), label: 'Morning'),
-        NavigationDestination(
-            icon: Icon(Icons.nights_stay_outlined),
-            selectedIcon: Icon(Icons.nights_stay),
-            label: 'Evening'),
-      ],
     );
   }
 }

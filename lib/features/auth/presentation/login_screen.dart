@@ -47,6 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
+      backgroundColor: Colors.white, // the logo image has a white background
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -56,13 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.local_drink_rounded, size: 72, color: theme.colorScheme.primary),
-                  const SizedBox(height: 12),
-                  Text(
-                    AppConstants.appName.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineLarge?.copyWith(color: theme.colorScheme.primary),
-                  ),
+                  Image.asset('assets/DairyLedger.png', height: 180, semanticLabel: AppConstants.appName),
                   const SizedBox(height: 8),
                   Text(
                     'Sign in with your phone number',

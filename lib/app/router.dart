@@ -35,7 +35,7 @@ class Routes {
   static const settings = '/settings';
   static const supplier = '/supplier';
 
-  /// Shared link / QR code: `https://DOMAIN/a/ACCOUNT_ID`.
+  /// Shared link / QR code: `https://DOMAIN/a/OWNER_UID/ACCOUNT_ID`.
   static const sharedAccountPrefix = '/a/';
 }
 
@@ -129,12 +129,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Farmer / supplier: read-only screens, no login.
       GoRoute(path: Routes.supplier, builder: (_, _) => const SupplierHomeScreen()),
       GoRoute(
-        path: '${Routes.supplier}/account/:id',
-        builder: (_, s) => SupplierAccountScreen(accountId: s.pathParameters['id']!),
+        path: '${Routes.supplier}/account/:ownerUid/:id',
+        builder: (_, s) => SupplierAccountScreen(
+          account: (ownerUid: s.pathParameters['ownerUid']!, accountId: s.pathParameters['id']!),
+        ),
       ),
       GoRoute(
-        path: '/a/:accountId',
-        builder: (_, s) => FollowAccountScreen(accountId: s.pathParameters['accountId']!),
+        path: '/a/:ownerUid/:accountId',
+        builder: (_, s) => FollowAccountScreen(
+          account: (ownerUid: s.pathParameters['ownerUid']!, accountId: s.pathParameters['accountId']!),
+        ),
       ),
     ],
   );

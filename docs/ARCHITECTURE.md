@@ -31,6 +31,21 @@ Related files: `docs/screen.md` (screen wireframes), `docs/FIREBASE_SETUP.md` (f
 | 6 | Onboarding must reappear if the user created an account and closed the app before finishing; keep a completion flag | `users/{uid}.onboardingCompleted`, enforced by a router guard (section 5, "Auth and onboarding"). |
 | 7 | Riverpod for state | `flutter_riverpod`, no code generation (section 8). |
 
+### Revision 4 (after the first run on a phone)
+
+| # | Change | Where |
+|---|---|---|
+| 1 | The Dairy Ledger logo is the app icon (adaptive + legacy), the native launch screen and the Flutter splash/login logo | `assets/`, `pubspec.yaml`, `flutter_launcher_icons` / `flutter_native_splash` |
+| 2 | No back button on the verify-number screen (the "Change number" link remains) | `otp_screen.dart` |
+| 3 | Onboarding asks the bill cycle in a plain input box like the name (default 7, 1 to 31) | `profile_fields.dart`, `onboarding_screen.dart` |
+| 4 | Home lists are flat rows: no cards, no elevation | `home_screen.dart`, `supplier_home_screen.dart` |
+| 5 | Account screen follows the updated wireframe: details on the screen (no card), Morning/Evening **tabs**, flat rows that open an edit **dialog**, full dates, zeros shown, no row highlights, header dropdown (QR code, delete week), top menu (delete account), Previous/Next at the bottom | `bill_view.dart`, `account_screen.dart`, `slot_dialog.dart` |
+| 6 | Settings shows the profile as read-only fields with an edit icon that opens a dialog | `settings_screen.dart`, `edit_profile_dialog.dart` |
+| 7 | Logging out clears the Firestore cache and the sync cursors | `LocalDataService`, `SessionService` |
+| 8 | Records deleted directly in the Firebase console linger in the app (see section 12): "Refresh all data" in Settings (and any logout) clears the local copy | `settings_screen.dart` |
+| 9 | Cache settings: the plugin only accepts `CACHE_SIZE_UNLIMITED` or 1 to 100 MB, and a failure to apply them no longer stops start-up | `main_common.dart` |
+| 10 | Accounts moved under the user: `users/{uid}/accounts/{accountId}`. Share links are `/a/{ownerUid}/{accountId}` | section 2, rules, router |
+
 Carried over from revision 1:
 - Data: Firestore with offline persistence (replaces local SQLite).
 - Auth: phone number (OTP) only, for admins. Suppliers do not sign in.
@@ -75,7 +90,7 @@ signed in? ── yes ─► profile loaded? ── no ──► splash / retry
                                      └ no ──► /login   (with "Open a supplier link")
 ```
 
-A supplier link (`https://<domain>/a/{accountId}`) is handled on any of these paths: it adds the account to the followed list and opens the read-only account screen, signed in or not.
+A supplier link (`https://<domain>/a/{ownerUid}/{accountId}`) is handled on any of these paths: it adds the account to the followed list and opens the read-only account screen, signed in or not.
 
 ## 2. Data model (Firestore)
 
@@ -88,28 +103,30 @@ users/{uid}/rates/{category}         one rate chart per category
     fats: { "3.0": 45.0, "3.1": 46.0, ... "10.0": 98.0, "10.5": 101.0 }
     updatedAt
 
-accounts/{accountId}                 top-level; auto-ID (20 random chars) = share key
-    ownerUid, name, category, adminName, dairyName,
+users/{uid}/accounts/{accountId}     auto-ID (20 random chars) = share key
+    name, category, adminName, dairyName,
     deleted, createdAt, updatedAt
-accounts/{accountId}/bills/{billId}  billId = start date, e.g. "2026-10-12"
-    ownerUid, startDate, endDate, cycleDays,      (immutable after create)
+users/{uid}/accounts/{accountId}/bills/{billId}   billId = start date, e.g. "2026-10-12"
+    startDate, endDate, cycleDays,                (immutable after create)
     days: { "2026-10-12": { "M": {milk, fat, rate, rateManual?},
                             "E": {milk, fat, rate, rateManual?} }, ... },
     totalMilk, totalAmount, deleted, updatedAt
 ```
+
+Why accounts live under the user (decided in revision 4): ownership is the path, so rules need no `ownerUid` field or `get()`, listing the admin's accounts is a plain collection read (no `where`, no composite index), and deleting a user's data is one subtree. The cost is that a share link carries two IDs (`/a/{ownerUid}/{accountId}`); the user ID is not secret, the random account ID is the key.
 
 Why it is shaped this way:
 
 | Choice | Reason |
 |---|---|
 | `onboardingCompleted` on the user document | A persistent flag the router checks on every start. It is created `false` at first sign-in and set `true` only when onboarding is submitted. |
-| Accounts top-level with a random ID | The ID is the credential suppliers hold in their link or QR code, so the same data serves admin and supplier with no second copy and no extra writes. |
+| Accounts under the user, with a random ID | The account ID is the credential suppliers hold in their link or QR code (together with the owner ID), so the same data serves admin and supplier with no second copy and no extra writes. |
 | A whole bill (all days) in one document | A bill is at most `cycleDays × 2` small entries. Viewing a bill is **1 read** and saving an entry is **1 write** (one document per entry would cost about 14 times more reads per bill view). |
 | `rate` stored on every entry | Later rate-chart changes do not alter old bills. |
 | `rateManual` on an entry | Marks an admin override. A later fat edit recomputes the rate from the chart only when `rateManual` is absent. It is written only when true. |
 | `startDate`, `endDate`, `cycleDays` immutable; date keys limited to the range | Enforces "days stay within the range". Changing the profile's cycle never rewrites existing bills. |
 | `totalMilk` and `totalAmount` stored on the bill | List screens show totals without computing, and Firestore `sum()` aggregations become possible later for cheap analytics. |
-| `ownerUid` copied onto every account and bill | Rules check ownership from the document itself, with no extra `get()` (rule `get()` calls are billed as reads). |
+| Ownership is the path (`users/{uid}/...`) | Rules check `request.auth.uid == uid` from the path, with no extra `get()` (rule `get()` calls are billed as reads) and no `ownerUid` field to keep in sync. |
 | `deleted` flag plus `updatedAt` instead of hard deletes | Delta sync only sees existing documents. A soft delete arrives as an update, so supplier caches drop it. Purge later. |
 | `adminName` and `dairyName` copied onto accounts | The supplier screen shows them without reading the private profile. Settings edits propagate with a batched update. |
 | Rates private under `users/{uid}` | Suppliers only need the rate that was applied, which is on each entry. |
@@ -122,28 +139,25 @@ A missing or zero rate is derived, not stored: a slot with `milk > 0` and `rate 
 ### Security rules (sketch)
 
 ```
-users/{uid}           read, write: request.auth.uid == uid
-                      validation: if onboardingCompleted == true then
-                        adminName and dairyName are non-empty and
-                        billCycleDays is between 1 and 31
-users/{uid}/rates/**  read, write: request.auth.uid == uid
+users/{uid}                  read, delete: request.auth.uid == uid
+                             create, update: owner AND (onboardingCompleted != true OR
+                               adminName and dairyName non-empty and billCycleDays 1..31)
+users/{uid}/rates/**         read, write: owner
 
-accounts/{accountId}
-    get:              anyone (the ID is the key)
-    list:             signed in AND resource.data.ownerUid == request.auth.uid
-    create:           request.auth.uid == request.resource.data.ownerUid
-    update, delete:   request.auth.uid == resource.data.ownerUid
-                      (and ownerUid unchanged)
+users/{uid}/accounts/{accountId}
+    get:                     anyone (the two IDs in the link are the key)
+    list:                    owner only
+    create, update, delete:  owner
   /bills/{billId}
-    read (get, list): anyone (addressing it requires the account ID)
-    create:           request.auth.uid == request.resource.data.ownerUid
-    update, delete:   request.auth.uid == resource.data.ownerUid
-                      (startDate, endDate, cycleDays unchanged)
+    read (get, list):        anyone (addressing it requires both IDs)
+    create:                  owner, cycleDays 1..31
+    update:                  owner; startDate, endDate, cycleDays unchanged
+    delete:                  owner
 
 everything else, including collection-group queries: denied
 ```
 
-Indexes live in `firestore.indexes.json` and are deployed to both projects: `accounts(ownerUid, updatedAt)` for the admin's delta sync, plus single-field indexes on `bills.updatedAt` and `bills.startDate`.
+The real file is `firestore.rules`. There are no composite indexes: the admin's delta sync and the bill queries only use single-field indexes (`updatedAt`, `startDate`), which Firestore creates automatically.
 
 ## 3. Theme
 
@@ -176,11 +190,11 @@ Source: `docs/screen.md`. Items marked "(not in wireframe)" are proposed and nee
                          /rates ───────┤
                          /analytics ───┘
 /home ─► /add-account          (FAB)
-/home ─► /account/:id          (tile)       no bottom bar; Morning | Evening bar instead
+/home ─► /account/:id          (row)        no bottom bar; Morning | Evening tabs inside
 /home ─► /settings             (gear icon)
 /supplier                      (followed accounts)
-/supplier/account/:id          (read-only account screen)
-/a/:accountId                  (deep link / QR entry)
+/supplier/account/:ownerUid/:id   (read-only account screen)
+/a/:ownerUid/:accountId       (deep link / QR entry)
 ```
 
 ### Login screen
@@ -195,7 +209,7 @@ Source: `docs/screen.md`. Items marked "(not in wireframe)" are proposed and nee
 - On success: ensure `users/{uid}` exists (create it with `onboardingCompleted: false` and `billCycleDays: 7` if missing), then the router decides between onboarding and home.
 
 ### Onboarding screen
-- Fields: **Name**, **Dairy name**, and a **billing cycle stepper** (`< 7 >`, default 7, range 1 to 31).
+- Fields: **Name**, **Dairy name** and **Billing cycle (days)**, all plain input boxes (cycle default 7, range 1 to 31).
 - Saving writes the names and cycle and sets `onboardingCompleted: true` in one update, then goes to home.
 - Cannot be skipped or backed out of. If the user created the account and closed the app, the next start reads `onboardingCompleted == false` and opens this screen again.
 
@@ -218,13 +232,14 @@ Source: `docs/screen.md`. Items marked "(not in wireframe)" are proposed and nee
 - (not in wireframe) Tapping a row edits its rate, and custom fats can be removed.
 
 ### Account screen (admin)
-- Back arrow and title "Account". An avatar, the **account name**, and an options menu (:) with **Show QR code** and **Delete account**.
-  - **QR code:** a dialog with a QR code of the account link `https://<domain>/a/{accountId}` and a Share button. The farmer scans it with the phone camera, or the admin shares the URL.
-  - **Delete account:** asks for confirmation, then soft-deletes.
-- A header block: **Week: dd-mm-yyyy to dd-mm-yyyy**, **Total Milk**, **Total Bill**. These are the totals for the whole bill (both sessions).
-- A table **DATE | MILK | FAT | RATE | TOTAL**, one row per day in the bill range, showing the session selected in the bottom bar. A footer row **TOTAL** shows the milk and amount totals for that session.
-- Buttons **Previous week** and **Next / Add week**. The second label is dynamic: **Add week** when the latest bill is being viewed, **Next** otherwise.
-- Bottom bar **Morning | Evening** switches the session shown in the table.
+Everything sits directly on the screen: no cards, no shadows, no highlighted rows.
+- **Top bar:** back arrow, title "Account", and a menu (top right) with **Delete account** (asks for confirmation, then soft-deletes).
+- **Account line:** avatar, **account name** and category, with a dropdown (:) holding **Show QR code** and **Delete this week**.
+  - **QR code:** a dialog with a QR code of the account link `https://<domain>/a/{ownerUid}/{accountId}` and a Share button. The farmer scans it with the phone camera, or the admin shares the URL.
+- **Details** in normal text, one under the other: `Week: dd-mm-yyyy to dd-mm-yyyy`, `Total Milk: xx ltr`, `Total Bill: xx RS`. These are the totals for the whole bill (both sessions).
+- **Tabs** **Morning | Evening** (opening on the session that matches the time of day). Below the tabs, that session's table.
+- **Table** `DATE | MILK | FAT | RATE | TOTAL`, one row per day of the bill range, styled like the Rates rows: plain, at least 56dp high, full date (`dd-mm-yyyy`), zeros when nothing is entered. **Tap a row** to edit it in a dialog (milk, fat, rate; the same style as the fat dialog). The footer row **TOTAL** shows the milk and amount totals of that session.
+- **Buttons** at the bottom, below the table: **Previous week** and **Next / Add week** (Add week on the newest bill, Next otherwise).
 - With no bills yet, an empty state shows a prominent **Add week** button.
 
 ### Add week (range picker)
@@ -233,17 +248,18 @@ Source: `docs/screen.md`. Items marked "(not in wireframe)" are proposed and nee
 - Confirming checks for overlap with existing bills (cache-first query of bills near the chosen start) and rejects an overlap with a message naming the clashing bill.
 - Creates the bill with `startDate`, `endDate` and `cycleDays`.
 
-### Bill rows (inside the account screen)
-- The DATE cell is fixed and not editable. Only dates inside the bill range exist.
-- MILK, FAT and RATE are inline inputs. See "Bills" in section 5 for the rate rules.
+### Edit row dialog (inside the account screen)
+- Title: the full date and the session. Fields: **Milk (litres)**, **Fat**, **Rate per litre**, and a live **Total**.
+- Typing a fat fills the rate from the category's rate chart. Typing a rate yourself overrides the chart (see "Bills" in section 5).
+- A fat with no rate shows an amber hint and still saves, with rate 0. The date is shown, not editable.
 
 ### Settings screen (not in wireframe)
-- Edit **Name**, **Dairy name** and **Billing cycle** (the same fields as onboarding). A note says a cycle change applies to new bills only.
-- **Logout** and **Delete my account** (required by Google Play). Optionally the app version.
+- **Your details:** name, dairy name and billing cycle shown as normal (read-only) input fields. The **edit icon** (or tapping a field) opens a dialog with the three inputs to change them. A note says a new cycle applies to new weeks only.
+- **Accounts I follow**, **Refresh all data** (clears this phone's copy and loads everything again), **Log out** (clears the local copy), **Delete my account** (required by Google Play).
 
 ### Supplier screens (not in wireframe)
-- **Supplier home** (`/supplier`): the followed accounts as tiles, in the same style as home tiles, showing dairy name, account name and latest bill total. Remove from list is a long-press or swipe action. No bottom bar.
-- **Supplier account screen**: the admin account screen with `readOnly = true`: no options menu, no inline inputs, no Add week. Previous and Next only, plus pull-to-refresh and "Load older".
+- **Supplier home** (`/supplier`): the followed accounts as flat rows, in the same style as the admin home rows, showing dairy name, account name and latest bill total. Remove from list is a long-press or swipe action. No bottom bar.
+- **Supplier account screen**: the admin account screen with `readOnly = true`: no menus, rows do not open a dialog, no Add week. Previous and Next only, plus pull-to-refresh and "Load older".
 - If the account was deleted by the admin, a "no longer available" state with a remove action.
 
 ### Analytics tab
@@ -286,7 +302,7 @@ Source: `docs/screen.md`. Items marked "(not in wireframe)" are proposed and nee
 9. A bill can be soft-deleted.
 
 ### Supplier view
-1. The admin shows the account QR code or shares `https://<domain>/a/{accountId}`.
+1. The admin shows the account QR code or shares `https://<domain>/a/{ownerUid}/{accountId}`.
 2. The supplier opens it (camera, WhatsApp or browser). The app reads the account document once, saves `{accountId, accountName, dairyName, adminName}` into the followed list on the device, and opens the account.
 3. The supplier account screen is the admin account screen with `readOnly = true`.
 4. On later launches the supplier lands directly on the followed list; no link is needed. Each tile refreshes through `SyncService` (section 6).
@@ -378,7 +394,6 @@ Not migrated: v1 supplier links (`/userscreen/<hash>/<hash>`) stop working and t
 | `accountsProvider` | `AsyncNotifier` | the admin's accounts, with delta sync |
 | `billsProvider(accountId)` | family `AsyncNotifier` | paged bill list for an account |
 | `billProvider(accountId, billId)` | family `AsyncNotifier` | one bill: entry edits, rate lookup and override, totals |
-| `sessionProvider` | `NotifierProvider` | Morning or Evening in the account screen |
 | `followedAccountsProvider` | `Notifier` | supplier list, persisted in `shared_preferences` |
 | `syncServiceProvider` | `Provider` | delta sync and cursors |
 | `*RepositoryProvider` | `Provider` | repositories (overridable in tests) |
@@ -412,8 +427,8 @@ Each phase is runnable on `dev`.
 3. Home shell with the bottom bar, Settings (profile edit).
 4. Rates screen.
 5. Accounts: home list, Add account, account menu (delete).
-6. Account screen and bills: header and totals, Morning/Evening table, inline entry, missing-rate message, rate override, Add week range picker, Previous and Next.
-7. Supplier flow: Hosting site and `assetlinks.json` for dev, deep link `/a/:accountId`, QR code and share, followed list, read-only reuse of the account screen, `SyncService` and caching.
+6. Account screen and bills: details and totals, Morning/Evening tabs, row edit dialog, missing-rate message, rate override, Add week range picker, Previous and Next.
+7. Supplier flow: Hosting site and `assetlinks.json` for dev, deep link `/a/:ownerUid/:accountId`, QR code and share, followed list, read-only reuse of the account screen, `SyncService` and caching.
 
 **Before the first release**
 8. Migration from v1.
@@ -448,7 +463,7 @@ lib/
   core/                           constants, logger, messenger, providers, provider_observer
     firestore/                    paths, cache-first reads, delta sync, sync cursors, write tracker
     utils/                        fat keys, formatters
-    widgets/                      loading/empty/error views, dialogs, cycle stepper
+    widgets/                      loading/empty/error views, confirm dialog
   features/<feature>/             data (repositories), models, providers, presentation
     auth, profile, rates, accounts, bills, supplier, analytics (placeholder)
 firestore.rules, firestore.indexes.json, hosting/   Firebase config in the repo
@@ -467,6 +482,12 @@ test/                             unit and widget tests
 - **Account screen menu** also has "Delete this week" (not in the wireframe).
 - **Session tab** (Morning/Evening) defaults to the time of day (before 15:00 is Morning).
 - **Theme**: `AppTheme` from `dairy_ledger_achieve` plus Material 3 navigation bar, snack bar, list tile and divider themes and a light status bar.
+
+### Local data, logout and records deleted outside the app
+
+- **The cache and the sync cursors are cleared together** (`LocalDataService.clear()`: `terminate()` + `clearPersistence()` + cursors + throttle). This happens on **logout**, after **account deletion** and on **Settings > Refresh all data**. If changes made offline have not reached the server yet, the app asks before discarding them. The supplier's followed-accounts list is kept (it belongs to the phone, not to the admin session).
+- **Records deleted directly in the Firebase console are not noticed by the app.** Delta sync asks the server only for documents that changed, and a deleted document simply no longer exists, so the server cannot say "this was removed". Profile and rates are read cache-first and are not refreshed either. This is the price of the low-cost design; inside the app everything is a soft delete, which sync does see. If it happens, **Settings > Refresh all data** (or any logout and login) repairs it. Edits to a document that was deleted on the server fail with `not-found` until then.
+- **Cache size:** the plugin accepts only `CACHE_SIZE_UNLIMITED` or 1 to 100 MB (an assertion fails for anything else, which is what a 20 GB setting did) and applies "unlimited" as 100 MB on Android. One dairy's data is a few megabytes, so eviction is not a practical risk. The settings call in `main_common.dart` is wrapped so a failure is logged and never stops start-up.
 
 ### Debug logging
 

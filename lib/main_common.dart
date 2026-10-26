@@ -10,6 +10,26 @@ import 'core/logger.dart';
 import 'core/provider_observer.dart';
 import 'core/providers.dart';
 
+/// Turns the offline cache on with the largest size the plugin accepts.
+///
+/// Delta sync only re-reads changed documents, so a cached document that is
+/// garbage-collected would silently go missing; the data of one dairy is a few
+/// megabytes, far below the limit. The plugin accepts only
+/// `Settings.CACHE_SIZE_UNLIMITED` or 1 MB to 100 MB (anything else fails an
+/// assertion). On Android "unlimited" is applied as the 100 MB default.
+/// Failing to apply the settings must never stop the app from starting, so
+/// errors are only logged.
+void _configureFirestoreCache() {
+  try {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  } catch (e) {
+    logd('FIRESTORE', 'could not apply cache settings (using defaults): $e');
+  }
+}
+
 /// Shared start-up for every flavor (called from `main_dev.dart` / `main_prod.dart`).
 Future<void> bootstrap(Flavor flavor) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,12 +37,7 @@ Future<void> bootstrap(Flavor flavor) async {
 
   await Firebase.initializeApp(options: flavor.firebaseOptions);
 
-  // Offline cache on, no size limit: history stays on the device, and
-  // screens read from it instead of paying for repeated server reads.
-  // FirebaseFirestore.instance.settings = const Settings(
-  //   persistenceEnabled: true,
-  //   cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  // );
+  _configureFirestoreCache();
 
   final prefs = await SharedPreferences.getInstance();
 

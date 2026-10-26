@@ -19,8 +19,10 @@ class Flavor {
 
   bool get isDev => name == 'dev';
 
-  /// Link a supplier opens (or scans) to follow an account.
-  String accountLink(String accountId) => 'https://$linkDomain/a/$accountId';
+  /// Link a supplier opens (or scans) to follow an account:
+  /// `https://<domain>/a/<ownerUid>/<accountId>`.
+  String accountLink(String ownerUid, String accountId) =>
+      'https://$linkDomain/a/$ownerUid/$accountId';
 }
 
 /// Overridden at start-up; reading it before that is a programming error.
