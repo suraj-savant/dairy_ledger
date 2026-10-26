@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dairy Ledger</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #FDFBF7; color: #211B2B;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 420px; padding: 32px 24px; text-align: center; }
+    h1 { color: #4527A0; font-size: 28px; margin: 0 0 8px; letter-spacing: .5px; }
+    p { font-size: 18px; line-height: 1.5; margin: 12px 0; }
+    .btn {
+      display: block; margin: 20px 0 0; padding: 16px 24px; border-radius: 12px;
+      background: #4527A0; color: #fff; text-decoration: none; font-weight: 700; font-size: 18px;
+    }
+    .btn.secondary { background: #fff; color: #4527A0; border: 2px solid #4527A0; }
+    small { display: block; margin-top: 24px; color: #625B71; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>DAIRY LEDGER</h1>
+    <p>Install the app to see your milk records. After installing, open this link again.</p>
+    <a id="install" class="btn" href="#">Install from Google Play</a>
+    <a id="open" class="btn secondary" href="#">I already have the app</a>
+    <small id="note"></small>
+  </main>
+  <script>
+    // This page only loads when the app did not open the link itself, i.e. the
+    // app is not installed (or the link was opened on a phone without it).
+    // Link format: https://<domain>/a/<accountId>
+    var accountId = (location.pathname.match(/^\/a\/([^\/?#]+)/) || [])[1] || '';
+    var isDev = location.hostname.indexOf('dev-') === 0;
+    var pkg = isDev ? 'com.dairyledger.app.dev' : 'com.dairyledger.app';
+
+    // "referrer" is stored by Google Play and can be read by the app on first launch.
+    var play = 'https://play.google.com/store/apps/details?id=' + pkg +
+               '&referrer=' + encodeURIComponent('account=' + accountId);
+    document.getElementById('install').href = play;
+
+    // Explicit Android intent: opens the app if installed, else falls back to Play.
+    document.getElementById('open').href =
+      'intent://' + location.host + '/a/' + accountId +
+      '#Intent;scheme=https;package=' + pkg +
+      ';S.browser_fallback_url=' + encodeURIComponent(play) + ';end';
+
+    if (isDev) {
+      document.getElementById('note').textContent =
+        'Development build: it is not published on Google Play.';
+    }
+    if (!/Android/i.test(navigator.userAgent)) {
+      document.getElementById('open').style.display = 'none';
+      document.getElementById('note').textContent = 'Open this link on an Android phone.';
+    }
+  </script>
+</body>
+</html>

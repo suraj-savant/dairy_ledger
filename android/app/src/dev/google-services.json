@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "311040172978",
+    "project_id": "dev-dairyledger",
+    "storage_bucket": "dev-dairyledger.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:311040172978:android:d2fb6af9a151c28d7efaab",
+        "android_client_info": {
+          "package_name": "com.dairyledger.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCC01rEU5JC8OgY4IRQgYUVf_TyjtwKHYE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

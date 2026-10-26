@@ -1,0 +1,23 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dairyledger.app.dev",
+      "sha256_cert_fingerprints": [
+        "03:79:F5:01:DC:3F:C8:BF:4F:2B:40:D3:E6:DC:39:27:B5:F9:FF:E7:08:A8:7A:D5:D7:13:71:A0:76:D9:6D:C5"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dairyledger.app",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_PLAY_APP_SIGNING_SHA256",
+        "REPLACE_WITH_UPLOAD_KEY_SHA256"
+      ]
+    }
+  }
+]

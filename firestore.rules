@@ -1,0 +1,68 @@
+rules_version = '2';
+
+// Dairy Ledger security rules. Layout (see docs/ARCHITECTURE.md):
+//   users/{uid}                          admin profile            (owner only)
+//   users/{uid}/rates/{category}         rate charts              (owner only)
+//   accounts/{accountId}                 account; random ID = share key
+//   accounts/{accountId}/bills/{billId}  one bill per document
+//
+// Suppliers are not signed in. They can read ONE account (and its bills) only if
+// they know its random ID, which is what the shared link / QR code carries.
+// Listing all accounts is only possible for the owner's own accounts.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Onboarding can only be marked complete with real answers.
+    function validProfile(d) {
+      return d.get('onboardingCompleted', false) != true
+        || (d.adminName is string && d.adminName.size() > 0
+            && d.dairyName is string && d.dairyName.size() > 0
+            && d.billCycleDays is int
+            && d.billCycleDays >= 1 && d.billCycleDays <= 31);
+    }
+
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validProfile(request.resource.data);
+
+      match /rates/{category} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    match /accounts/{accountId} {
+      allow get: if true;
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      match /bills/{billId} {
+        allow read: if true;
+        allow create: if signedIn()
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.cycleDays is int
+          && request.resource.data.cycleDays >= 1
+          && request.resource.data.cycleDays <= 31;
+        // The date range of a bill never changes after creation.
+        allow update: if signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.startDate == resource.data.startDate
+          && request.resource.data.endDate == resource.data.endDate
+          && request.resource.data.cycleDays == resource.data.cycleDays;
+        allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      }
+    }
+  }
+}
