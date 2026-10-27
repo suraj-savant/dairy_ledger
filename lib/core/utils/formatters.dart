@@ -39,6 +39,12 @@ class Fmt {
     return s.endsWith('0') ? s.substring(0, s.length - 1) : s;
   }
 
+  /// Rate per litre with at least one decimal: `0.0`, `52.0`, `52.25`.
+  static String rate(double v) {
+    final s = num(v);
+    return s.contains('.') ? s : '$s.0';
+  }
+
   /// Currency amount with two decimals, e.g. `286.00`.
   static String money(double v) => round2(v).toStringAsFixed(2);
 

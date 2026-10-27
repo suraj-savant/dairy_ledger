@@ -21,12 +21,18 @@ Future<FatRate?> showFatDialog(
 }) {
   return showDialog<FatRate>(
     context: context,
-    builder: (_) => _FatDialog(title: title, fat: fat, rate: rate, fatLocked: fatLocked),
+    builder: (_) =>
+        _FatDialog(title: title, fat: fat, rate: rate, fatLocked: fatLocked),
   );
 }
 
 class _FatDialog extends StatefulWidget {
-  const _FatDialog({required this.title, this.fat, this.rate, required this.fatLocked});
+  const _FatDialog({
+    required this.title,
+    this.fat,
+    this.rate,
+    required this.fatLocked,
+  });
   final String title;
   final double? fat;
   final double? rate;
@@ -38,9 +44,14 @@ class _FatDialog extends StatefulWidget {
 
 class _FatDialogState extends State<_FatDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _fat = TextEditingController(text: widget.fat == null ? '' : Fat.key(widget.fat!));
+  late final _fat = TextEditingController(
+    text: widget.fat == null ? '' : Fat.key(widget.fat!),
+  );
   late final _rate = TextEditingController(
-      text: (widget.rate == null || widget.rate == 0) ? '' : Fmt.num(widget.rate!));
+    text: (widget.rate == null || widget.rate == 0)
+        ? ''
+        : Fmt.num(widget.rate!),
+  );
 
   @override
   void dispose() {
@@ -49,11 +60,16 @@ class _FatDialogState extends State<_FatDialog> {
     super.dispose();
   }
 
-  static final _decimal = [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))];
+  static final _decimal = [
+    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+  ];
 
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.pop(context, (fat: Fmt.parseNum(_fat.text)!, rate: Fmt.parseNum(_rate.text)!));
+    Navigator.pop(context, (
+      fat: Fmt.parseNum(_fat.text)!,
+      rate: Fmt.parseNum(_rate.text)!,
+    ));
   }
 
   @override
@@ -69,7 +85,9 @@ class _FatDialogState extends State<_FatDialog> {
               controller: _fat,
               enabled: !widget.fatLocked,
               autofocus: widget.fat == null,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: _decimal,
               decoration: const InputDecoration(labelText: 'Fat'),
               validator: (v) {
@@ -83,7 +101,9 @@ class _FatDialogState extends State<_FatDialog> {
             TextFormField(
               controller: _rate,
               autofocus: widget.fat != null,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: _decimal,
               decoration: const InputDecoration(labelText: 'Rate per litre'),
               validator: (v) {
@@ -96,7 +116,10 @@ class _FatDialogState extends State<_FatDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
         TextButton(onPressed: _save, child: const Text('Save')),
       ],
     );
@@ -123,7 +146,10 @@ Future<String?> showTextDialog(
         onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(ctx, controller.text.trim()),
           child: Text(confirmLabel),

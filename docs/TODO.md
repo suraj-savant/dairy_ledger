@@ -8,7 +8,7 @@ Related docs: `ARCHITECTURE.md` (design and implementation notes), `CACHING.md` 
 ## Verified so far
 
 - [x] `flutter analyze`: no issues
-- [x] `flutter test`: 37 tests pass (utils, bill model, rate chart, slot rate logic, slot dialog, OTP input, links, followed list)
+- [x] `flutter test`: 41 tests pass (utils, bill model, rate chart, slot rate logic, slot dialog, OTP input, links, followed list)
 - [x] `flutter build apk --debug --flavor dev -t lib/main_dev.dart` builds; merged manifest has the dev link host and app name
 - [x] Ran on a phone (moto g34, dev flavor); fixes from that run are listed under revision 4 in `ARCHITECTURE.md`
 
@@ -26,7 +26,7 @@ Related docs: `ARCHITECTURE.md` (design and implementation notes), `CACHING.md` 
 - [ ] `flutter run --flavor dev -t lib/main_dev.dart` (or the **Dev (debug)** launch configuration)
 - [ ] Login with the test number, OTP, onboarding appears and cannot be skipped
 - [ ] Close the app during onboarding, reopen: onboarding appears again
-- [ ] Create a rate category, edit a rate, add a custom fat (for example 10.5)
+- [ ] Create a rate category; Rates > Edit: type several rates (Next key moves down), 0.0 clears on focus, add a fat, tick fats and Delete (also standard ones), Save (one `[FIRESTORE] WRITE update ... fat change(s)`), Cancel/back asks to discard, tabs are hidden while editing
 - [ ] Add an account, open it, add a week (range shows start to end, no overlap with an existing week)
 - [ ] Enter milk and fat: rate fills in, total updates, row saves when focus leaves; try a fat with no rate (message, rate 0), then a manual rate override
 - [ ] Morning/Evening bar, Previous week / Next / Add week label
@@ -90,3 +90,4 @@ Related docs: `ARCHITECTURE.md` (design and implementation notes), `CACHING.md` 
 | 2026-10-25 | Architecture designed (3 revisions) and written to `ARCHITECTURE.md` |
 | 2026-10-25 | MVP implemented: auth, onboarding, rates, accounts, bills, supplier flow, rules, hosting files, tests |
 | 2026-10-26 | Fixes after the first phone run: logo/icon/splash, onboarding and settings inputs, flat lists, account screen redesign (tabs, edit dialog), cache cleared on logout, Refresh all data, cache size fix, accounts moved under the user |
+| 2026-10-27 | Rates edit mode: bulk edit, add/delete fats (standard ones too), missing rate shown as 0.0, one write per Save, tabs hidden while editing |

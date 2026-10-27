@@ -12,8 +12,11 @@ class RateRepository {
   final FsPaths _paths;
 
   /// Category name -> document ID: trimmed, upper case, no slashes.
-  static String categoryId(String name) =>
-      name.trim().replaceAll(RegExp(r'\s+'), ' ').replaceAll('/', '-').toUpperCase();
+  static String categoryId(String name) => name
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .replaceAll('/', '-')
+      .toUpperCase();
 
   /// All charts of the admin. Served from the cache; the server is only asked
   /// when the cache is empty (new device / first run).
@@ -28,9 +31,7 @@ class RateRepository {
     if (snap == null || snap.docs.isEmpty) {
       snap = await getQueryFromServer(col, label: col.path);
     }
-    return {
-      for (final d in snap.docs) d.id: RateChart.fromMap(d.id, d.data()),
-    };
+    return {for (final d in snap.docs) d.id: RateChart.fromMap(d.id, d.data())};
   }
 
   /// Creates a category seeded with fat 3.0 .. 10.0 at rate 0.
@@ -40,10 +41,7 @@ class RateRepository {
     final ref = _paths.rates(uid).doc(id);
     trackWrite(
       'create ${ref.path} (${chart.fats.length} fats)',
-      ref.set({
-        'fats': chart.fats,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }),
+      ref.set({'fats': chart.fats, 'updatedAt': FieldValue.serverTimestamp()}),
     );
     return chart;
   }
@@ -61,14 +59,32 @@ class RateRepository {
     );
   }
 
-  void removeFat(String uid, String category, String fatKey) {
+  /// Saves an edited chart as ONE write: only the fats that were added,
+  /// changed or removed are sent (each as its own field path, so fats added
+  /// from another phone are not overwritten). Nothing is sent when unchanged.
+  void saveChart(
+    String uid,
+    String category,
+    Map<String, double> original,
+    Map<String, double> edited,
+  ) {
+    final changes = <Object, Object?>{};
+    for (final e in edited.entries) {
+      if (original[e.key] != e.value) {
+        changes[FieldPath(['fats', e.key])] = e.value;
+      }
+    }
+    for (final key in original.keys) {
+      if (!edited.containsKey(key)) {
+        changes[FieldPath(['fats', key])] = FieldValue.delete();
+      }
+    }
+    if (changes.isEmpty) return;
+
     final ref = _paths.rates(uid).doc(category);
     trackWrite(
-      'update ${ref.path} remove fats[$fatKey]',
-      ref.update({
-        FieldPath(['fats', fatKey]): FieldValue.delete(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }),
+      'update ${ref.path} ${changes.length} fat change(s)',
+      ref.update({...changes, 'updatedAt': FieldValue.serverTimestamp()}),
     );
   }
 

@@ -12,9 +12,9 @@ class RateChart {
 
   /// New chart with fat 3.0 .. 10.0 at rate 0.
   factory RateChart.seeded(String category) => RateChart(
-        category: category,
-        fats: {for (final k in Fat.seedKeys()) k: 0.0},
-      );
+    category: category,
+    fats: {for (final k in Fat.seedKeys()) k: 0.0},
+  );
 
   factory RateChart.fromMap(String category, Json m) {
     final raw = (m['fats'] as Map?) ?? const {};
@@ -37,8 +37,9 @@ class RateChart {
   /// Entries sorted by fat ascending.
   List<MapEntry<String, double>> get sorted {
     final list = fats.entries.toList();
-    list.sort((a, b) =>
-        (Fat.parse(a.key) ?? 0).compareTo(Fat.parse(b.key) ?? 0));
+    list.sort(
+      (a, b) => (Fat.parse(a.key) ?? 0).compareTo(Fat.parse(b.key) ?? 0),
+    );
     return list;
   }
 

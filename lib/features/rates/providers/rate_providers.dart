@@ -44,11 +44,15 @@ class RatesNotifier extends AsyncNotifier<Map<String, RateChart>> {
     state = AsyncData({..._charts, category: chart.withFat(key, rate)});
   }
 
-  void removeFat(String category, String fatKey) {
+  /// Saves the whole edited chart (fat key -> rate) with a single write.
+  void saveChart(String category, Map<String, double> edited) {
     final chart = _charts[category];
     if (chart == null) return;
-    _repo.removeFat(_uid, category, fatKey);
-    state = AsyncData({..._charts, category: chart.withoutFat(fatKey)});
+    _repo.saveChart(_uid, category, chart.fats, edited);
+    state = AsyncData({
+      ..._charts,
+      category: RateChart(category: category, fats: edited),
+    });
   }
 
   void deleteCategory(String category) {
@@ -60,9 +64,9 @@ class RatesNotifier extends AsyncNotifier<Map<String, RateChart>> {
 
 final ratesProvider =
     AsyncNotifierProvider<RatesNotifier, Map<String, RateChart>>(
-  RatesNotifier.new,
-  name: 'ratesProvider',
-);
+      RatesNotifier.new,
+      name: 'ratesProvider',
+    );
 
 /// Category chosen in the Rates dropdown (null = first one).
 class SelectedCategory extends Notifier<String?> {
@@ -75,5 +79,24 @@ class SelectedCategory extends Notifier<String?> {
   void select(String? category) => state = category;
 }
 
-final selectedCategoryProvider =
-    NotifierProvider<SelectedCategory, String?>(SelectedCategory.new, name: 'selectedCategoryProvider');
+final selectedCategoryProvider = NotifierProvider<SelectedCategory, String?>(
+  SelectedCategory.new,
+  name: 'selectedCategoryProvider',
+);
+
+/// True while the Rates tab is in edit mode. The home shell watches it to hide
+/// the bottom navigation, so the tabs cannot be switched with unsaved edits.
+class RatesEditing extends Notifier<bool> {
+  @override
+  bool build() {
+    ref.watch(authStateProvider); // never carry edit mode over to another user
+    return false;
+  }
+
+  void set(bool editing) => state = editing;
+}
+
+final ratesEditingProvider = NotifierProvider<RatesEditing, bool>(
+  RatesEditing.new,
+  name: 'ratesEditingProvider',
+);
