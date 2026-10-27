@@ -3,7 +3,7 @@
 Last updated: 2026-10-26. Update this file whenever a task is finished or a new one appears.
 Legend: `[x]` done, `[ ]` open, `[!]` blocked on a decision or input.
 
-Related docs: `ARCHITECTURE.md` (design and implementation notes), `FIREBASE_SETUP.md` (flavors, Firebase projects, signing, deploys), `screen.md` (wireframes), `../hosting/README.md` (links).
+Related docs: `ARCHITECTURE.md` (design and implementation notes), `CACHING.md` (how the cache, sync and log tags work), `WALKTHROUGH.md` (one scenario end to end: navigation, loading, rendering, writing), `FIREBASE_SETUP.md` (flavors, Firebase projects, signing, deploys), `screen.md` (wireframes), `../hosting/README.md` (links).
 
 ## Verified so far
 

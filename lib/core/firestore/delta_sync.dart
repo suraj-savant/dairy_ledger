@@ -21,10 +21,15 @@ Future<void> runDeltaSync({
 }) async {
   final cursor = cursors.read(cursorKey);
   final query = buildQuery(cursor);
+  logd('SYNC',
+      '$cursorKey: ${cursor == null ? 'initial load (no cursor yet)' : 'delta since ${cursor.toDate().toIso8601String()}'}');
   try {
     final snap = await query.get(const GetOptions(source: Source.server));
-    logd('SYNC',
-        '$cursorKey: ${cursor == null ? 'initial load' : 'delta'} -> ${snap.docs.length} docs from server');
+    logd('FIRESTORE',
+        'QUERY $cursorKey from server -> ${snap.docs.length} docs, billed ${snap.docs.isEmpty ? 1 : snap.docs.length} read(s)');
+    if (snap.docs.isNotEmpty) {
+      logd('CACHE', 'STORE ${snap.docs.length} changed docs from $cursorKey');
+    }
 
     Timestamp? newest;
     for (final doc in snap.docs) {
@@ -36,6 +41,6 @@ Future<void> runDeltaSync({
     if (newest != null) await cursors.advance(cursorKey, newest);
   } on FirebaseException catch (e) {
     // Offline or temporarily unavailable: keep using the cache.
-    logd('SYNC', '$cursorKey: sync skipped (${e.code})');
+    logd('SYNC', '$cursorKey: skipped (${e.code}), using the cache only');
   }
 }

@@ -26,7 +26,7 @@ void _configureFirestoreCache() {
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
   } catch (e) {
-    logd('FIRESTORE', 'could not apply cache settings (using defaults): $e');
+    logd('CACHE', 'could not apply cache settings (using defaults): $e');
   }
 }
 

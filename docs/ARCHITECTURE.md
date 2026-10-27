@@ -496,10 +496,13 @@ All logging goes through `logd(tag, message)` and prints only in debug builds. F
 | Tag | What it shows |
 |---|---|
 | `AUTH` | sending the OTP (number masked), verifying, sign-in, sign-out |
-| `FIRESTORE` | every read (cache or server) and every write (queued, acknowledged or failed) |
-| `SYNC` | delta syncs, documents fetched, cursor movements, throttling |
+| `FIRESTORE` | traffic with the **server**: reads that reached it (with billed reads), write acknowledgements and rejections |
+| `CACHE` | the **local cache**: reads served from it (hit or miss), writes applied to it immediately, documents stored after a server fetch, and the cache being cleared |
+| `SYNC` | delta syncs: initial load or changes since the cursor, cursor movements, throttling |
 | `STATE` | every Riverpod provider change (`AppProviderObserver`), onboarding, followed list |
 | `ROUTER` | redirects and shared links being opened |
+
+What each tag means, when it appears and example traces: `CACHING.md`.
 
 ### Not built yet
 

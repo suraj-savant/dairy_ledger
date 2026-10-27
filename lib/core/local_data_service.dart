@@ -33,15 +33,15 @@ class LocalDataService {
   /// terminated first (required by `clearPersistence`) and is recreated
   /// automatically by the next read or write.
   Future<void> clear() async {
-    logd('FIRESTORE', 'clearing local cache');
+    logd('CACHE', 'CLEAR everything (terminate + clearPersistence)');
     try {
       await _db.terminate();
       await _db.clearPersistence();
-      logd('FIRESTORE', 'local cache cleared');
+      logd('CACHE', 'CLEAR done');
     } catch (e) {
       // Do not block logout if the cache cannot be cleared; cursors are still
       // reset below so the next session starts with a full sync.
-      logd('FIRESTORE', 'could not clear cache: $e');
+      logd('CACHE', 'CLEAR failed: $e');
     }
     await _cursors.clearAll();
     _throttle.clear();
