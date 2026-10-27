@@ -2,14 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/logger.dart';
 import '../../../core/providers.dart';
-import '../../accounts/providers/account_providers.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../data/account_deletion_service.dart';
 import '../data/profile_repository.dart';
+import '../models/public_profile.dart';
 import '../models/user_profile.dart';
 
 final profileRepositoryProvider = Provider<ProfileRepository>(
-  (ref) => ProfileRepository(ref.watch(fsPathsProvider)),
+  (ref) => ProfileRepository(ref.watch(fsPathsProvider), ref.watch(syncThrottleProvider)),
   name: 'profileRepositoryProvider',
 );
 
@@ -50,12 +50,13 @@ class ProfileNotifier extends AsyncNotifier<UserProfile?> {
   }
 
   /// Settings edit. A cycle change only affects bills created afterwards.
-  /// Changed names are copied onto the admin's accounts for supplier screens.
-  Future<void> updateSettings({
+  /// The two names are also written to the public profile that suppliers read,
+  /// so renaming the dairy is one small write, not one per account.
+  void updateSettings({
     required String adminName,
     required String dairyName,
     required int billCycleDays,
-  }) async {
+  }) {
     final old = state.value ?? UserProfile.fresh;
     final profile = old.copyWith(
       adminName: adminName.trim(),
@@ -64,19 +65,18 @@ class ProfileNotifier extends AsyncNotifier<UserProfile?> {
     );
     ref.read(profileRepositoryProvider).save(_uid, profile);
     state = AsyncData(profile);
-
-    if (old.adminName != profile.adminName || old.dairyName != profile.dairyName) {
-      await ref.read(accountRepositoryProvider).propagateProfile(
-            _uid,
-            adminName: profile.adminName,
-            dairyName: profile.dairyName,
-          );
-      ref.invalidate(accountsProvider);
-    }
   }
 }
 
 final profileProvider = AsyncNotifierProvider<ProfileNotifier, UserProfile?>(
   ProfileNotifier.new,
   name: 'profileProvider',
+);
+
+/// The names of a dairy owner as suppliers see them (`users/{uid}/public/profile`).
+/// Keyed by the owner's uid, so every account of one dairy shares one read.
+final ownerProfileProvider = FutureProvider.autoDispose.family<PublicProfile?, String>(
+  (ref, ownerUid) =>
+      ref.watch(profileRepositoryProvider).fetchPublic(ownerUid, refresh: true),
+  name: 'ownerProfileProvider',
 );

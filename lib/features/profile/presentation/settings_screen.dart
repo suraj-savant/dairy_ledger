@@ -92,7 +92,7 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _edit(BuildContext context, WidgetRef ref, UserProfile current) async {
     final input = await showEditProfileDialog(context, current);
     if (input == null) return;
-    await ref.read(profileProvider.notifier).updateSettings(
+    ref.read(profileProvider.notifier).updateSettings(
           adminName: input.adminName,
           dairyName: input.dairyName,
           billCycleDays: input.billCycleDays,

@@ -10,6 +10,7 @@ Future<void> showAccountQrDialog(
   BuildContext context, {
   required Account account,
   required String link,
+  required String dairyName,
 }) {
   return showDialog<void>(
     context: context,
@@ -40,7 +41,7 @@ Future<void> showAccountQrDialog(
           icon: const Icon(Icons.share),
           label: const Text('Share link'),
           onPressed: () => SharePlus.instance.share(ShareParams(
-            text: 'View your milk records at ${account.dairyName.isEmpty ? 'our dairy' : account.dairyName}: $link',
+            text: 'View your milk records at ${dairyName.isEmpty ? 'our dairy' : dairyName}: $link',
           )),
         ),
       ],

@@ -10,17 +10,15 @@ typedef AccountRef = ({String ownerUid, String accountId});
 /// A supplier / customer of the dairy (`users/{ownerUid}/accounts/{accountId}`).
 ///
 /// The random document ID is the share key: anyone with the account link or
-/// QR code can read the account and its bills (read-only). [adminName] and
-/// [dairyName] are copies of the owner's profile so the supplier screens can
-/// show them without reading the private profile.
+/// QR code can read the account and its bills (read-only). The dairy and admin
+/// names are not stored here: suppliers read them from the owner's public
+/// profile (`users/{ownerUid}/public/profile`).
 class Account {
   const Account({
     required this.id,
     required this.ownerUid,
     required this.name,
     required this.category,
-    required this.adminName,
-    required this.dairyName,
     this.deleted = false,
   });
 
@@ -28,8 +26,6 @@ class Account {
   final String ownerUid;
   final String name;
   final String category;
-  final String adminName;
-  final String dairyName;
   final bool deleted;
 
   AccountRef get ref => (ownerUid: ownerUid, accountId: id);
@@ -42,8 +38,6 @@ class Account {
       ownerUid: doc.reference.parent.parent?.id ?? '',
       name: (m['name'] as String?) ?? '',
       category: (m['category'] as String?) ?? '',
-      adminName: (m['adminName'] as String?) ?? '',
-      dairyName: (m['dairyName'] as String?) ?? '',
       deleted: m['deleted'] == true,
     );
   }

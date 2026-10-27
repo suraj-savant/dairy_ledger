@@ -24,6 +24,7 @@ class AccountDeletionService {
     final rates = await _paths.rates(uid).get();
     await _deleteAll(rates.docs.map((d) => d.reference).toList());
 
+    await _paths.publicProfile(uid).delete();
     await _paths.user(uid).delete();
     logd('FIRESTORE', 'DELETED profile and ${rates.docs.length} rate charts');
   }

@@ -7,6 +7,7 @@ import '../../../core/widgets/dialogs.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../accounts/models/account.dart';
 import '../../accounts/providers/account_providers.dart';
+import '../../profile/providers/profile_providers.dart';
 import '../providers/bill_providers.dart';
 import 'bill_view.dart';
 import 'qr_dialog.dart';
@@ -79,6 +80,7 @@ class AccountScreen extends ConsumerWidget {
           context,
           account: account,
           link: ref.read(flavorProvider).accountLink(account.ownerUid, account.id),
+          dairyName: ref.read(profileProvider).value?.dairyName ?? '',
         );
       case _HeaderMenu.deleteWeek:
         final notifier = ref.read(billsProvider(account.ref).notifier);

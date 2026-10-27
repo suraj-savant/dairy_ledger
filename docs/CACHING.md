@@ -77,6 +77,7 @@ Delta sync (section 5) uses its own server query with `Source.server`.
 | **Older bills** | "Previous week" past the loaded ones | `BillRepository.loadOlder` | **always the server**, 5 per page, then cached | A cache-only page could have gaps (see section 5). |
 | **Overlap check** when adding a week | Add week confirmed | `BillRepository.findOverlap` | server query of bills starting within about a month before the new range | A few documents at most. Offline it falls back to the cache. |
 | **Supplier home tile** (latest bill) | opening the supplier home screen | `latestBillProvider` | delta sync, then a cache query for 1 bill | About 1 read for the sync plus any changed bill, per followed account. |
+| **Owner's public profile** `users/{uid}/public/profile` | supplier opens a followed account or the supplier home | `ProfileRepository.fetchPublic(refresh: true)` | server **at most once per 6 hours** per owner per app run, otherwise cache first | One read covers every account of the same dairy. The admin side backfills this document once (`_ensurePublicProfile`) if it is missing. |
 | **Supplier account document** | opening a followed account | `AccountRepository.fetchPublic(refresh: true)` | server **at most once per 6 hours** per account per app run, otherwise cache first | This is how a supplier notices a deleted or renamed account. |
 | **Account from a shared link** | `/a/{ownerUid}/{accountId}` opened | `fetchPublic` | cache first, then server | Then it is saved to the followed list. |
 | **Followed list** | provider built | `FollowedStore.read` | `shared_preferences` | Not Firestore. |
@@ -98,7 +99,7 @@ repository.saveSlot(...)
 | Action | Document written | Operation | Notes |
 |---|---|---|---|
 | First login | `users/{uid}` | `set` | `onboardingCompleted: false`, `billCycleDays: 7` |
-| Onboarding / Settings edit | `users/{uid}` | `set` with merge | Changed names also update every account (batched). |
+| Onboarding / Settings edit | `users/{uid}` and `users/{uid}/public/profile` | `set` with merge, and `set` | The second document holds the two names suppliers can read. A rename is two writes in total, however many accounts exist. |
 | Create / edit / delete a rate | `users/{uid}/rates/{category}` | `set` / `update` with `FieldPath(['fats', key])` / `delete` | Fat keys contain a dot, hence `FieldPath`. |
 | Add account | `users/{uid}/accounts/{id}` | `set` | The ID is generated on the phone, so it works offline. |
 | Delete account / week | the account or bill document | `update` with `deleted: true` | **Soft delete**, so other devices' delta sync sees it. |

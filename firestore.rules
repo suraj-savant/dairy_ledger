@@ -4,6 +4,7 @@ rules_version = '2';
 // document (see docs/ARCHITECTURE.md):
 //   users/{uid}                                       admin profile            (owner only)
 //   users/{uid}/rates/{category}                      rate charts              (owner only)
+//   users/{uid}/public/profile                        admin + dairy name       (anyone may get)
 //   users/{uid}/accounts/{accountId}                  account; random ID = share key
 //   users/{uid}/accounts/{accountId}/bills/{billId}   one bill per document
 //
@@ -36,6 +37,14 @@ service cloud.firestore {
 
       match /rates/{category} {
         allow read, write: if isOwner(uid);
+      }
+
+      // The only part of the profile suppliers can read: the two names. Anything
+      // private stays in the user document above.
+      match /public/{doc} {
+        allow get: if true;
+        allow list: if isOwner(uid);
+        allow create, update, delete: if isOwner(uid);
       }
 
       match /accounts/{accountId} {

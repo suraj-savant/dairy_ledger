@@ -24,8 +24,6 @@ class FollowedAccountsNotifier extends Notifier<List<FollowedAccount>> {
       ownerUid: account.ownerUid,
       accountId: account.id,
       accountName: account.name,
-      dairyName: account.dairyName,
-      adminName: account.adminName,
     );
     final next = [
       for (final f in state)

@@ -36,6 +36,9 @@ class BillView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bills = ref.watch(billsProvider(account.ref));
     final notifier = ref.read(billsProvider(account.ref).notifier);
+    // Suppliers see which dairy this is; the admin already knows.
+    final dairyName =
+        readOnly ? ref.watch(ownerProfileProvider(account.ownerUid)).value?.dairyName : null;
 
     return bills.when(
       loading: () => const LoadingView(),
@@ -48,7 +51,7 @@ class BillView extends ConsumerWidget {
 
         if (bill == null) {
           return Column(children: [
-            BillHeader(account: account, bill: null, showDairy: readOnly, menu: headerMenu),
+            BillHeader(account: account, bill: null, dairyName: dairyName, menu: headerMenu),
             Expanded(
               child: EmptyView(
                 icon: Icons.event_note_outlined,
@@ -69,7 +72,7 @@ class BillView extends ConsumerWidget {
           initialIndex: DateTime.now().hour < 15 ? 0 : 1,
           child: Column(
             children: [
-              BillHeader(account: account, bill: bill, showDairy: readOnly, menu: headerMenu),
+              BillHeader(account: account, bill: bill, dairyName: dairyName, menu: headerMenu),
               TabBar(tabs: [for (final s in Session.values) Tab(text: s.label)]),
               Expanded(
                 child: TabBarView(

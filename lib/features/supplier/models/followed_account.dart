@@ -3,21 +3,18 @@ import 'dart:convert';
 import '../../accounts/models/account.dart';
 
 /// An account a supplier follows, remembered on the supplier's device so the
-/// app opens straight to it next time (no link needed).
+/// app opens straight to it next time (no link needed). The dairy name is not
+/// stored: it is read from the owner's public profile so it is always current.
 class FollowedAccount {
   const FollowedAccount({
     required this.ownerUid,
     required this.accountId,
     required this.accountName,
-    required this.dairyName,
-    required this.adminName,
   });
 
   final String ownerUid;
   final String accountId;
   final String accountName;
-  final String dairyName;
-  final String adminName;
 
   AccountRef get ref => (ownerUid: ownerUid, accountId: accountId);
 
@@ -25,16 +22,12 @@ class FollowedAccount {
         'ownerUid': ownerUid,
         'accountId': accountId,
         'accountName': accountName,
-        'dairyName': dairyName,
-        'adminName': adminName,
       };
 
   factory FollowedAccount.fromJson(Map<String, dynamic> j) => FollowedAccount(
         ownerUid: j['ownerUid'] as String,
         accountId: j['accountId'] as String,
         accountName: (j['accountName'] as String?) ?? '',
-        dairyName: (j['dairyName'] as String?) ?? '',
-        adminName: (j['adminName'] as String?) ?? '',
       );
 
   static String encodeList(List<FollowedAccount> list) =>

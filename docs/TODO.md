@@ -15,7 +15,7 @@ Related docs: `ARCHITECTURE.md` (design and implementation notes), `CACHING.md` 
 ## Blocked: needs you
 
 - [!] **Create the Firestore database** in both Firebase consoles (`dev-dairyledger`, `dairyledgerapp`) if not already created.
-- [!] **Redeploy rules and indexes to dev (the data paths changed)**, then deploy to prod. The new layout `users/{uid}/accounts/...` is denied by the previous rules. Records created before this change live at the old top-level `accounts/` and are no longer read; delete them in the console.
+- [!] **Redeploy rules and indexes to dev (the data paths changed, and suppliers now read `users/{uid}/public/profile`)**, then deploy to prod. The new layout `users/{uid}/accounts/...` is denied by the previous rules. Records created before this change live at the old top-level `accounts/` and are no longer read; delete them in the console.
 `firebase login:use <account>` then `firebase deploy --only firestore --project <id>` (details in `FIREBASE_SETUP.md`). Waiting for your go-ahead.
 - [!] **Deploy hosting to dev** (`firebase deploy --only hosting --project dev-dairyledger`) so links and QR codes can open the dev app.
 - [!] **Prod fingerprints:** send the Play App Signing SHA-256 and the upload key SHA-256. They replace the two placeholders for `com.dairyledger.app` in `hosting/public/.well-known/assetlinks.json`.
@@ -36,6 +36,7 @@ Related docs: `ARCHITECTURE.md` (design and implementation notes), `CACHING.md` 
 - [ ] Offline: enter data, reconnect, check the console for `[FIRESTORE] WRITE ... acknowledged`
 - [ ] Settings: change bill cycle (new weeks only), change names (supplier sees new names), log out
 - [ ] Settings > Delete my account on a throwaway user
+- [ ] Rename the dairy in Settings: the supplier phone shows the new name after a refresh (public profile, at most 6 hours without a forced refresh)
 - [ ] Log out, log back in: the lists reload from the server (cache was cleared; see `[FIRESTORE] local cache cleared` in the log)
 - [ ] Delete a record in the Firebase console, then Settings > Refresh all data: it disappears from the app
 - [ ] Check the Firestore usage tab against the cost estimates in `ARCHITECTURE.md` section 6

@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../auth/providers/auth_providers.dart';
-import '../../profile/providers/profile_providers.dart';
 import '../data/account_repository.dart';
 import '../models/account.dart';
 
@@ -40,13 +39,10 @@ class AccountsNotifier extends AsyncNotifier<List<Account>> {
 
   /// Creates an account (name stored in upper case).
   Account create({required String name, required String category}) {
-    final profile = ref.read(profileProvider).value;
     final account = ref.read(accountRepositoryProvider).create(
           uid: _uid,
           name: name.trim().toUpperCase(),
           category: category,
-          adminName: profile?.adminName ?? '',
-          dairyName: profile?.dairyName ?? '',
         );
     state = AsyncData([..._accounts, account]..sort((a, b) => a.name.compareTo(b.name)));
     return account;

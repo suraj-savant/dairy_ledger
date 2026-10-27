@@ -7,6 +7,7 @@ typedef Json = Map<String, dynamic>;
 ///
 ///   users/{uid}                                       admin profile (private)
 ///   users/{uid}/rates/{category}                      rate chart (private)
+///   users/{uid}/public/profile                        the two names suppliers may see (public get)
 ///   users/{uid}/accounts/{accountId}                  account; its random ID is the share key
 ///   users/{uid}/accounts/{accountId}/bills/{billId}   one bill (all days) per document
 class FsPaths {
@@ -16,6 +17,10 @@ class FsPaths {
   DocumentReference<Json> user(String uid) => db.collection('users').doc(uid);
 
   CollectionReference<Json> rates(String uid) => user(uid).collection('rates');
+
+  /// The only part of the profile suppliers can read: admin and dairy name.
+  DocumentReference<Json> publicProfile(String uid) =>
+      user(uid).collection('public').doc('profile');
 
   CollectionReference<Json> accounts(String uid) => user(uid).collection('accounts');
 

@@ -8,6 +8,7 @@ import '../../../core/widgets/dialogs.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../bills/providers/bill_providers.dart';
+import '../../profile/providers/profile_providers.dart';
 import '../models/followed_account.dart';
 import '../providers/supplier_providers.dart';
 
@@ -70,9 +71,11 @@ class _FollowedTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final latest = ref.watch(latestBillProvider(account.ref));
     final theme = Theme.of(context);
+    // One read per dairy: all accounts of the same owner share this provider.
+    final dairyName = ref.watch(ownerProfileProvider(account.ownerUid)).value?.dairyName ?? '';
 
     final subtitle = [
-      if (account.dairyName.isNotEmpty) account.dairyName,
+      if (dairyName.isNotEmpty) dairyName,
       latest.when(
         data: (bill) => bill == null
             ? 'No bills yet'
@@ -94,7 +97,7 @@ class _FollowedTile extends ConsumerWidget {
         ),
         title: Text(account.accountName),
         subtitle: Text(subtitle, style: theme.textTheme.bodyMedium),
-        isThreeLine: account.dairyName.isNotEmpty,
+        isThreeLine: dairyName.isNotEmpty,
         trailing: PopupMenuButton<String>(
           onSelected: (_) async {
             final ok = await confirm(

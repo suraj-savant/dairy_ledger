@@ -8,17 +8,15 @@ void main() {
         ownerUid: 'u1',
         accountId: 'a1',
         accountName: 'RAMESH',
-        dairyName: 'Shree Dairy',
-        adminName: 'Suraj',
       ),
     ];
     final decoded = FollowedAccount.decodeList(FollowedAccount.encodeList(list));
     expect(decoded.single.ref, (ownerUid: 'u1', accountId: 'a1'));
-    expect(decoded.single.dairyName, 'Shree Dairy');
+    expect(decoded.single.accountName, 'RAMESH');
   });
 
   test('entries saved before the owner ID existed are skipped, not crashed on', () {
-    const old = '[{"accountId":"a1","accountName":"X","dairyName":"","adminName":""}]';
+    const old = '[{"accountId":"a1","accountName":"X"}]';
     expect(FollowedAccount.decodeList(old), isEmpty);
   });
 }

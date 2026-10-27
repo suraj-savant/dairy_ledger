@@ -12,15 +12,16 @@ class BillHeader extends StatelessWidget {
     super.key,
     required this.account,
     required this.bill,
-    this.showDairy = false,
+    this.dairyName,
     this.menu,
   });
 
   final Account account;
   final Bill? bill;
 
-  /// Suppliers also see which dairy the account belongs to.
-  final bool showDairy;
+  /// Suppliers also see which dairy the account belongs to (read from the
+  /// owner's public profile). Null for the admin.
+  final String? dairyName;
 
   /// Optional dropdown next to the name (QR code, delete week) for the admin.
   final Widget? menu;
@@ -28,9 +29,8 @@ class BillHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final subtitle = showDairy && account.dairyName.isNotEmpty
-        ? '${account.dairyName} · ${account.category}'
-        : account.category;
+    final dairy = dairyName ?? '';
+    final subtitle = dairy.isEmpty ? account.category : '$dairy · ${account.category}';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),

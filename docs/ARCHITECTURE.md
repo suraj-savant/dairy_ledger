@@ -13,7 +13,7 @@ Related files: `docs/screen.md` (screen wireframes), `docs/FIREBASE_SETUP.md` (f
 | 1 | Suppliers see data as soon as the admin adds or updates it; a refresh or app open is enough | Admin writes go to the single source of truth in Firestore. Suppliers read that same data (no snapshot copy) and fetch changes on app open and pull-to-refresh. |
 | 2 | Supplier view = admin account view, read-only, old records, multiple accounts, no re-clicking the link | The account screen is reused with a `readOnly` flag. A followed-accounts list is stored on the supplier's device. Old bills load on demand. |
 | 3 | Onboarding: admin name, dairy name, bill cycle days (default 7); days grouped by cycle for totals | `users/{uid}` profile created by an onboarding screen. A "bill" (shown as a "week" in the UI) is one cycle of N days and totals are per bill. |
-| 4 | Settings can edit the onboarding answers later | Settings screen edits the profile. Name changes propagate to accounts; cycle changes apply to new bills only. |
+| 4 | Settings can edit the onboarding answers later | Settings screen edits the profile. The names are also written to a small public profile document (one write); cycle changes apply to new bills only. |
 | 6 | Cost effective: cache, load only what changed | A whole bill in one document, cache-first reads, delta sync by `updatedAt`, no real-time listeners (section 6). |
 | 7 | Fat range 3.0 to 10.0 plus manual extra fat values | Rate chart seeded 3.0 to 10.0 in 0.1 steps. Any other fat can be added with its own rate. |
 | 9 | Analytics: check cost, make Pro if expensive | Cost analysis in section 6. Analytics is not part of the MVP. |
@@ -99,12 +99,14 @@ users/{uid}                          private to the admin
     onboardingCompleted (bool),
     adminName, dairyName, billCycleDays (default 7),
     migratedFromV1, createdAt, updatedAt
+users/{uid}/public/profile           the only part suppliers may read
+    adminName, dairyName, updatedAt
 users/{uid}/rates/{category}         one rate chart per category
     fats: { "3.0": 45.0, "3.1": 46.0, ... "10.0": 98.0, "10.5": 101.0 }
     updatedAt
 
 users/{uid}/accounts/{accountId}     auto-ID (20 random chars) = share key
-    name, category, adminName, dairyName,
+    name, category,
     deleted, createdAt, updatedAt
 users/{uid}/accounts/{accountId}/bills/{billId}   billId = start date, e.g. "2026-10-12"
     startDate, endDate, cycleDays,                (immutable after create)
@@ -128,7 +130,7 @@ Why it is shaped this way:
 | `totalMilk` and `totalAmount` stored on the bill | List screens show totals without computing, and Firestore `sum()` aggregations become possible later for cheap analytics. |
 | Ownership is the path (`users/{uid}/...`) | Rules check `request.auth.uid == uid` from the path, with no extra `get()` (rule `get()` calls are billed as reads) and no `ownerUid` field to keep in sync. |
 | `deleted` flag plus `updatedAt` instead of hard deletes | Delta sync only sees existing documents. A soft delete arrives as an update, so supplier caches drop it. Purge later. |
-| `adminName` and `dairyName` copied onto accounts | The supplier screen shows them without reading the private profile. Settings edits propagate with a batched update. |
+| Names in `users/{uid}/public/profile`, not copied onto accounts | Suppliers cannot read the private profile, so the two names they may see live in their own public document. Renaming the dairy is one write (a copy per account used to need a batch), suppliers always see the current name, and everything else in the profile stays private. Costs a supplier one extra read per dairy per 6 hours (cached; all accounts of one dairy share it). |
 | Rates private under `users/{uid}` | Suppliers only need the rate that was applied, which is on each entry. |
 | Fat keys normalized | Rounded to at most 2 decimals and written with at least 1 (`"4.0"`, `"4.25"`). Lookup is by exact normalized key. |
 
@@ -143,6 +145,7 @@ users/{uid}                  read, delete: request.auth.uid == uid
                              create, update: owner AND (onboardingCompleted != true OR
                                adminName and dairyName non-empty and billCycleDays 1..31)
 users/{uid}/rates/**         read, write: owner
+users/{uid}/public/{doc}     get: anyone; list and writes: owner
 
 users/{uid}/accounts/{accountId}
     get:                     anyone (the two IDs in the link are the key)
@@ -276,7 +279,7 @@ Everything sits directly on the screen: no cards, no shadows, no highlighted row
 6. Logout keeps all data in the cloud.
 
 ### Settings
-- Editing names rewrites `adminName` and `dairyName` on the admin's accounts (batched, rare).
+- Editing names also updates the public profile (`users/{uid}/public/profile`), so suppliers see the new dairy name after their next refresh (at most 6 hours). Nothing is rewritten on the accounts.
 - Changing the bill cycle affects only bills created afterwards. Existing bills keep their own `cycleDays` and range.
 
 ### Rates
@@ -303,7 +306,7 @@ Everything sits directly on the screen: no cards, no shadows, no highlighted row
 
 ### Supplier view
 1. The admin shows the account QR code or shares `https://<domain>/a/{ownerUid}/{accountId}`.
-2. The supplier opens it (camera, WhatsApp or browser). The app reads the account document once, saves `{accountId, accountName, dairyName, adminName}` into the followed list on the device, and opens the account.
+2. The supplier opens it (camera, WhatsApp or browser). The app reads the account document once, saves `{ownerUid, accountId, accountName}` into the followed list on the device (the dairy name is read from the owner's public profile), and opens the account.
 3. The supplier account screen is the admin account screen with `readOnly = true`.
 4. On later launches the supplier lands directly on the followed list; no link is needed. Each tile refreshes through `SyncService` (section 6).
 5. Pull-to-refresh fetches changes. Cached bills also work offline.

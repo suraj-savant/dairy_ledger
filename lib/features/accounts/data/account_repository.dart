@@ -40,8 +40,6 @@ class AccountRepository {
     required String uid,
     required String name,
     required String category,
-    required String adminName,
-    required String dairyName,
   }) {
     final ref = _paths.accounts(uid).doc(); // random 20-char ID = share key
     final account = Account(
@@ -49,16 +47,12 @@ class AccountRepository {
       ownerUid: uid,
       name: name,
       category: category,
-      adminName: adminName,
-      dairyName: dairyName,
     );
     trackWrite(
       'create ${ref.path}',
       ref.set({
         'name': name,
         'category': category,
-        'adminName': adminName,
-        'dairyName': dairyName,
         'deleted': false,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -94,29 +88,5 @@ class AccountRepository {
     }
     final snap = await getDocCacheFirst(ref);
     return snap.exists ? Account.fromDoc(snap) : null;
-  }
-
-  /// Copies new profile names onto every account of the admin (settings edit).
-  Future<void> propagateProfile(
-    String uid, {
-    required String adminName,
-    required String dairyName,
-  }) async {
-    final col = _paths.accounts(uid);
-    final snap = await getQueryFromCache(col, label: '${col.path} (propagate names)');
-    // Firestore batches hold at most 500 writes.
-    for (var i = 0; i < snap.docs.length; i += 400) {
-      final chunk = snap.docs.skip(i).take(400).toList();
-      final batch = _paths.db.batch();
-      for (final doc in chunk) {
-        batch.update(doc.reference, {
-          'adminName': adminName,
-          'dairyName': dairyName,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-      trackWrite('batch update names on ${chunk.length} accounts', batch.commit());
-    }
-    logd('FIRESTORE', 'propagated profile names to ${snap.docs.length} accounts');
   }
 }
